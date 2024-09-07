@@ -1,7 +1,7 @@
 ## 제출해야하는 내용
 
-- 코랩에서 작업한 파일
-- 주차별 README.md 에 채워야 하는 실험 보고서
+- 책 읽고 정리한 README.md 파일
+- 그외 실습 코드 (optional)
 
 ## 제출 방법
 
@@ -9,19 +9,6 @@
 2. 작업 하시고 커밋 후 오리진으로 푸시해주시면 됩니다.
 3. main 으로 풀리퀘 날려주시면 됩니다. merge 는 하시면 안돼요!  
    풀리퀘 제목 : `"이름" 스프린트 1주차 과제 제출합니다.`
-
-### 예시
-
-```bash
-git clone git@github.com:HateSlop/pre-week1.git  # 클론
-cd pre-week1 # 프로젝트 루트로 이동
-git checkout -b siwonblue # 브랜치 생성
-mkdir siwonblue # 개인 폴더 만들기
-cd siwonblue # 개인 폴더로 이동
-git add . # 작업 후 add
-git commit -m "[feat] ~~" # 커밋
-git push origin siwonblue # 오리진에 푸시
-```
 
 ### 폴더구조
 
