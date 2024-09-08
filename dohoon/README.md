@@ -279,11 +279,131 @@ LLM이 우리 생활에 미치는 영향: sLLM, 효율적인 학습과 추론, R
     mh_attention = MultiheadAttention(embedding_dim, embedding_dim, n_head)
     after_attention_embeddings = mh_attention(input_embeddings, input_embeddings, input_embeddings)
     after_attention_embeddings.shape
-ㅇ
+
 ## 2.4 정규화와 피드 포워드 층
 정규화: 딥러닝 모델에서 입력이 일정한 분포를 갖도록 만들어 학습이 안정적이고 빨라질 수 있도록 하는 기법
 <br>
 Fully connected layer인 feed forward층 이용하여 전체
+### 2.4.1 층 정규화 이해하기
+> 정규화란 모델이 각 입력 변수의 중요성을 적절히 반영하여 좀 더 정확한 예측을 할 수 있도록 모든 입력 변수가 비슷한 범위와 분포를 갖도록 조정하는 것.
+
+>x를 norm_x로 정규화하는 식
+
+    norm_x = (x-평균)/표준편차 #표준정규분포 공식과 동일
+- Batch normalization: 미니 배치 사이에 정규화 수행, 주로 이미지 처리에 사용
+    - 자연어 처리 시에는 sequence 길이가 제각각이므로 패딩 기법으로 길이 맞춰주는데, 이 상태로 batch normalization 수행하면 효과가 떨어짐.
+- Layer normalization: 각 토큰 임베딩의 평균과 표준편차를 구해 정규화 수행
+    - different layer normalization methods by operating sequence
+        - post-norm: after each attention and feed-forward layer
+        - pre-norm: before each --
+    - nn.LayerNorm (by Pytorch)
+### 2.4.2 피드 포워드 층
+> 데이터의 특징을 학습하는 fully connected layer. 입력 텍스트 전체를 이해하는 역할 담당.
+
+> 선형 층, 드롭아웃 층, 층 정규화, 활성함수로 구성됨.
+> 예제 코드
+
+    class PreLayerNormFeedForward(nn.Module):
+        def __init__(self, d_model, dim_feedforward, dropout):
+            super().__init__()
+            self.linear1 = nn.Linear(d_model, dim_feedforward) # 선형 층 1
+            self.linear2 = nn.Linear(dim_feedforward, d_model) # 선형 층 2
+            self.dropout1 = nn.Dropout(dropout) # 드랍아웃 층 1
+            self.dropout2 = nn.Dropout(dropout) # 드랍아웃 층 2
+            self.activation = nn.GELU() # 활성 함수
+            self.norm = nn.LayerNorm(d_model) # 층 정규화
+
+        def forward(self, src):
+            x = self.norm(src)
+            x = x + self.linear2(self.dropout1(self.activation(self.linear1(x))))
+            x = self.dropout2(x)
+            return x
+
+## 2.5 인코더
+인코더: multi-head attention, layer norm, feed forward 층이 반복되는 형태
+> 예제 코드
+
+        class TransformerEncoderLayer(nn.Module):
+            def __init__(self, d_model, nhead, dim_feedforward, dropout):
+                super().__init__()
+                self.attn = MultiheadAttention(d_model, d_model, nhead) # 멀티 헤드 어텐션 클래스
+                self.norm1 = nn.LayerNorm(d_model) # 층 정규화
+                self.dropout1 = nn.Dropout(dropout) # 드랍아웃
+                self.feed_forward = PreLayerNormFeedForward(d_model, dim_feedforward, dropout) # 피드포워드
+
+            def forward(self, src):
+                norm_x = self.norm1(src)
+                attn_output = self.attn(norm_x, norm_x, norm_x)
+                x = src + self.dropout1(attn_output) # 잔차 연결
+
+                # 피드 포워드
+                x = self.feed_forward(x)
+                return x
+이 과정 반복하면 됨.
+## 2.6 디코더
+# 03. 트랜스포머 모델을 다루기 위한 허깅페이스 트랜스포머 라이브러리
+## 3.1 허깅페이스 트랜스포머란
+다양한 트랜스포머 모델을 통일된 인터페이스로 사용할 수 있도록 지원하는 오픈소스 라이브러리
+<br>
+transformer library와 dataset library가 있다.
+
+## 3.2 허깅페이스 허브 탐색하기
+
+### 3.2.1 모델 허브
+### 3.2.2 데이터셋 허브
+### 3.2.3 모델 데모를 공개하고 사용할 수 있는 스페이스
+> 사용자가 자신의 모델 데모를 간편하게 공개할 수 있는 기능.
+별도의 웹 개발 없이 웹 인터페이스로 공유 가능
+
+> 리더보드: 다양한 오픈소스 LLM과 그 성능 정보 게시
+## 3.3 허깅페이스 라이브러리 사용법 익히기
+
+### 3.3.1 모델 활용하기
+> 허깅페이스에서는 모델을 body와 head로 구분함
+- 같은 body를 사용하면서 다른 작업에 사용할 수 있도록
+- body, body+head, head
+
+> class AutoModel: 모델의 바디를 불러옴
+
+> class AutoModelForSequenceClassification: 헤드가 포함된 모델을 불러옴
+
+### 3.3.2 토크나이저 활용하기
+
+> 토크나이저: text to token, token to idx, adding special tokens in need
+
+> class AutoTokenizer: 저장소의 토크나이저 불러옴
+- tokenizer_config.json에 토크나이저 정보, 
+- tokenizer.json에 vocab 정보
+
+> 토크나이저 사용하기
+- input_ids: list of token id
+- attention_mask: 1-> genuine text, 0 -> padding
+- token_type_ids: id of the sentence
+- convert_ids_to_tokens: input_ids to tokens
+- decode: input ids to sentence
+
+### 3.3.3 데이터셋 활용하기
+> load_dataset('name_of_dataset', 'name_of_subset')
+- split='train': train 데이터만 가져옴
+
+## 3.4 모델 학습시키기
+실습 예제: 한국어 기사 제목 바탕으로 기사 카테고리 분류
+### 3.4.1 데이터 준비
+> 코드 예제
+
+    #klue의 ynat데이터에서 train, validation 데이터 불러옴
+    from datasets import load_dataset
+    klue_tc_train = load_dataset('klue', 'ynat', split='train')
+    klue_tc_eval = load_dataset('klue', 'ynat', split='validation')
+    #필요 없는 칼럼 제거
+    klue_tc_train = klue_tc_train.remove_columns(['guid', 'url', 'date'])
+    klue_tc_eval = klue_tc_eval.remove_columns(['guid', 'url', 'date'])
+    #label_str 칼럼 추가
+    def make_str_label(batch):
+        batch['label_str'] = klue_tc_label.int2str(batch['label'])
+        return batch
+    klue_tc_train = klue_tc_train.map(make_str_label, batched=True, batch_size=1000)
+### 3.4.2 트레이너 API를 사용해 학습하기
 
 
 
