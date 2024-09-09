@@ -60,7 +60,7 @@
     +  모든 입력을 동시에 처리하기 때문에 순서 정보를 위치 인코딩으로 파악
     + 절대적 위치 인코딩: 입력 데이터의 각 토큰에 고유한 위치 정보를 부여해 모델이 순서를 인식할 수 있도록 하는 방법
     + 상대적 위치 인코딩: 입력 토큰 간의 상대적인 거리 정보로 더 유연하게 학습하는 방법
-- 사진(그림(2.7))
+- ![설명 텍스트](./pics/그림2.7.jpg)
 ## 어텐션 이해하기
 - 딥러닝 모델이 작동하려면 단어 사이의 관계를 계산해 관련이 있는지 찾고, 관련이 있는 단어의 맥락을 포함시켜 단어를 재해석해야 함
 - 쿼리: 우리가 입력하는 검색어
@@ -83,16 +83,296 @@
     + 토큰 사이의 관계를 한 가지 측면에서 이해하는 것이 아닌, 여러 측면에서 동시에 고려하는 방식
 - 사진(그림 2.17)
 ## 정규화와 피드 포워드 층
+-  배치 정규화: 배치 입력 데이터 사이에 정규화
+    + 자연어에서는 입력으로 들어가는 문장 길이가 다양하기 때문에 정규화 효과 보장 어려움
+-  층 정규화: 각 입력 샘플 내의 모든 특성의 평균과 분산을 계산하고 정규화
+- 사진(그림 2.19)
+    + 사후 정규화: 어텐션과 피드 포워드 층 이후에 정규화
+    + 사전 정규화: 어텐션과 피드 포워드 층 이전에 정규화
+-  피드 포워드 층: 데이터의 특징을 학습하는 완전 연결 층으로, 입력 텍스트 전체를 이해하는 부분
 ## 인코더
+  - 인코더는 멀티 헤드 어텐션, 층 정규화, 피드 포워드 층이 반복되는 형태
+  - 잔차 연결: 입력을 다시 더해주는 형태로, 안정적인 학습 가능
+  - 사진(그림 2.21)
 ## 디코더
+-  생성을 담당하는 부분
+-  인코더와 유사하지만 멀티 헤드 에텐션 대신 마스크 멀티 헤드 어텐션을 이용
+-  크로스 어텐션: 인코더의 결과를 디코더가 활용하는 부분
+- 사진(그림 2.22)
+
 ## BERT, GPT, T5 등 트랜스포머를 활용한 아키텍처
+ - 트랜스포머를 활용한 모델은 크게 세 가지
+    + 인코더만 활용한 자연여 이해 ex) BERT
+    + 디코더만 활용해 자연어 생성 ex) GPT
+    + 인코더와 디코더를 모두 활용해 생성과 이해 작업 모두 뛰어난 성능 ex) BART, T5
 ## 주요 사전 학습 메커니즘
+- 인과적 언어 모델링: 문장의 시작부터 끝까지 순차적으로 단어를 예측하는 학습 방식
+    + 많은 데이터에 대해 다음 단어를 예측하는 방법을 학습
+-  마스크 언어 모델링: 문장 일부를 마스크로 가리고, 가려진 단어를 예측하는 학습 방식
+
 # 3. 트랜스포머 모델을 다루기 위한 허깅페이스 트랜스포머 라이브러리
 ## 허깅페이스 트랜스포머란
+- 허깅페이스 트랜스포머: 다양한 트랜스포머 모델을 통일된 인터페이스로 사용할 수 있도록 지원하는 오픈소스 라이브러리
+    + 트랜스포머 모델과 토크나이저를 사용하는 transformers 라이브러리
+    + 데이터셋을 사용하는 datasets 라이브러리
+- ### BERT와 GPT-2 모델을 활용할 때 허깅페이스 트랜스포머 코드
+```python
+from transformers import AutoTokenizer, AutoModel
+
+text = "What is Huggingface Transformers?"
+# BERT 모델 활용
+bert_model = AutoModel.from_pretrained("bert-base-uncased")
+bert_tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+encoded_input = bert_tokenizer(text, return_tensors='pt')
+bert_output = bert_model(**encoded_input)
+# GPT-2 모델 활용
+gpt_model = AutoModel.from_pretrained('gpt2')
+gpt_tokenizer = AutoTokenizer.from_pretrained('gpt2')
+encoded_input = gpt_tokenizer(text, return_tensors='pt')
+gpt_output = gpt_model(**encoded_input)
+```
+
 ## 허깅페이스 허브 탐색하기
+- 모델 허브
+    + 어떤 작업에 사용하는지, 어떤 언어로 학습된 모델인지 등 다양한 기준으로 모델 분류
+    + 자연어처리, 컴퓨터 비전, 오디오 처리, 멀티 모달 등 다양한 작업 분야의 모델 제공
+    + 모델 내부 사진
+    + 사진(그림 3.2) 
+- 데이터셋 허브
+    + 모델 허브와 달리 분류 기준에 데이터셋 크기, 데이터 유형 존재
+- 스페이스
+    + 모델 데모를 간편하게 공개할 수 있는 기능
 ## 허깅페이스 라이브러리 사용법 익히기
+- 모델은 바디와 헤드로 구분
+    + 바디: 사전 학습된 모델의 기본 구조
+    + 헤드: 특정 작업에 맞게 설계된 출력층
+- 사진(그림 3.9)
+- 토크나이저 : 텍스트를 토큰 단위로 나누고 각 토큰을 대응하는 토큰 아이디로 변환
+    + AutoTokenizer를 이용해 사용
+- ### 토크나이저 불러오기
+```python
+from transformers import AutoTokenizer
+model_id = 'klue/roberta-base'
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+```
+
+
+- ### 토크나이저 사용하기
+    + input_ids: 토큰화했을 때 각 토큰이 토크나이저 사전의 몇 번째 항목인지 나타내는 변수
+    + attention_mask: 1이면 패딩(토큰 아이디의 길이를 맞추기 위해 추가하는 특수 토큰)이 아닌 실제 단어
+    + decode: CLS 토큰으로 문장을 시작하고 SEP 토큰으로 문장을 종료, 2개의 문장을 한번에 토큰화하면 SEP로 두 문장 구분
+```python
+tokenized = tokenizer("토크나이저는 텍스트를 토큰 단위로 나눈다")
+print(tokenized)
+# {'input_ids': [0, 9157, 7461, 2190, 2259, 8509, 2138, 1793, 2855, 5385, 2200, 20950, 2],
+#  'token_type_ids': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#  'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+
+print(tokenizer.convert_ids_to_tokens(tokenized['input_ids']))
+# ['[CLS]', '토크', '##나이', '##저', '##는', '텍스트', '##를', '토', '##큰', '단위', '##로', '나눈다', '[SEP]']
+
+print(tokenizer.decode(tokenized['input_ids']))
+# [CLS] 토크나이저는 텍스트를 토큰 단위로 나눈다 [SEP]
+
+print(tokenizer.decode(tokenized['input_ids'], skip_special_tokens=True))
+# 토크나이저는 텍스트를 토큰 단위로 나눈다
+```
+- datasets 라이브러리 사용해서 데이터셋 사용 가능
+```python
+from datasets import load_dataset
+klue_mrc_dataset = load_dataset('klue', 'mrc')
+# klue_mrc_dataset_only_train = load_dataset('klue', 'mrc', split='train')
+```
+- 로컬의 데이터셋 사용은 Dataset 클래스의 from_pandas 메서드 사용
+```python
+from datasets import load_dataset
+# 로컬의 데이터 파일을 활용
+dataset = load_dataset("csv", data_files="my_file.csv")
+
+# 파이썬 딕셔너리 활용
+from datasets import Dataset
+my_dict = {"a": [1, 2, 3]}
+dataset = Dataset.from_dict(my_dict)
+
+# 판다스 데이터프레임 활용
+from datasets import Dataset
+import pandas as pd
+df = pd.DataFrame({"a": [1, 2, 3]})
+dataset = Dataset.from_pandas(df)
+```
 ## 모델 학습시키기
+- 트레이너 API: 간편하게 모델의 학습을 수행할 수있도록 학습 과정을 추상화한 API
+- ### Trainer를 사용한 학습
+```python
+import torch
+import numpy as np
+from transformers import (
+    Trainer,
+    TrainingArguments,
+    AutoModelForSequenceClassification,
+    AutoTokenizer
+)
+
+def tokenize_function(examples):
+    return tokenizer(examples["title"], padding="max_length", truncation=True)
+
+model_id = "klue/roberta-base"
+model = AutoModelForSequenceClassification.from_pretrained(model_id, num_labels=len(train_dataset.features['label'].names))
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+train_dataset = train_dataset.map(tokenize_function, batched=True)
+valid_dataset = valid_dataset.map(tokenize_function, batched=True)
+test_dataset = test_dataset.map(tokenize_function, batched=True)
+
+training_args = TrainingArguments(
+    output_dir="./results",
+    num_train_epochs=1,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    evaluation_strategy="epoch",
+    learning_rate=5e-5,
+    push_to_hub=False
+)
+
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    return {"accuracy": (predictions == labels).mean()}
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=valid_dataset,
+    tokenizer=tokenizer,
+    compute_metrics=compute_metrics,
+)
+
+trainer.train()
+
+trainer.evaluate(test_dataset) # 정확도 0.84
+```
+- ### Trainer를 사용하지 않는 학습
+```python
+import torch
+from tqdm.auto import tqdm
+from torch.utils.data import DataLoader
+from transformers import AdamW
+
+def tokenize_function(examples): # 제목(title) 컬럼에 대한 토큰화
+    return tokenizer(examples["title"], padding="max_length", truncation=True)
+
+# 모델과 토크나이저 불러오기
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model_id = "klue/roberta-base"
+model = AutoModelForSequenceClassification.from_pretrained(model_id, num_labels=len(train_dataset.features['label'].names))
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model.to(device)
+
+def make_dataloader(dataset, batch_size, shuffle=True):
+    dataset = dataset.map(tokenize_function, batched=True).with_format("torch") # 데이터셋에 토큰화 수행
+    dataset = dataset.rename_column("label", "labels") # 컬럼 이름 변경
+    dataset = dataset.remove_columns(column_names=['title']) # 불필요한 컬럼 제거
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+# 데이터로더 만들기
+train_dataloader = make_dataloader(train_dataset, batch_size=8, shuffle=True)
+valid_dataloader = make_dataloader(valid_dataset, batch_size=8, shuffle=False)
+test_dataloader = make_dataloader(test_dataset, batch_size=8, shuffle=False)
+
+def train_epoch(model, data_loader, optimizer):
+    model.train()
+    total_loss = 0
+    for batch in tqdm(data_loader):
+        optimizer.zero_grad()
+        input_ids = batch['input_ids'].to(device) # 모델에 입력할 토큰 아이디
+        attention_mask = batch['attention_mask'].to(device) # 모델에 입력할 어텐션 마스크
+        labels = batch['labels'].to(device) # 모델에 입력할 레이블
+        outputs = model(input_ids, attention_mask=attention_mask, labels=labels) # 모델 계산
+        loss = outputs.loss # 손실
+        loss.backward() # 역전파
+        optimizer.step() # 모델 업데이트
+        total_loss += loss.item()
+    avg_loss = total_loss / len(data_loader)
+    return avg_loss
+
+def evaluate(model, data_loader):
+    model.eval()
+    total_loss = 0
+    predictions = []
+    true_labels = []
+    with torch.no_grad():
+        for batch in tqdm(data_loader):
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
+            outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+            logits = outputs.logits
+            loss = outputs.loss
+            total_loss += loss.item()
+            preds = torch.argmax(logits, dim=-1)
+            predictions.extend(preds.cpu().numpy())
+            true_labels.extend(labels.cpu().numpy())
+    avg_loss = total_loss / len(data_loader)
+    accuracy = np.mean(np.array(predictions) == np.array(true_labels))
+    return avg_loss, accuracy
+
+num_epochs = 1
+optimizer = AdamW(model.parameters(), lr=5e-5)
+
+# 학습 루프
+for epoch in range(num_epochs):
+    print(f"Epoch {epoch+1}/{num_epochs}")
+    train_loss = train_epoch(model, train_dataloader, optimizer)
+    print(f"Training loss: {train_loss}")
+    valid_loss, valid_accuracy = evaluate(model, valid_dataloader)
+    print(f"Validation loss: {valid_loss}")
+    print(f"Validation accuracy: {valid_accuracy}")
+
+# Testing
+_, test_accuracy = evaluate(model, test_dataloader)
+print(f"Test accuracy: {test_accuracy}") # 정확도 0.82
+```
 ## 모델 추론하기
+- 모델 추론 또한 파이프라인을 사용하는 방법과 직접 추론하는 방법 존재
+- ### pipeline을 사용한 학습
+```python
+from transformers import pipeline
+
+model_id = "본인의 아이디 입력/roberta-base-klue-ynat-classification"
+
+model_pipeline = pipeline("text-classification", model=model_id)
+
+model_pipeline(dataset["title"][:5])
+```
+- ### 커스텀 pipeline 구현
+```python
+import torch
+from torch.nn.functional import softmax
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+class CustomPipeline:
+    def __init__(self, model_id):
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self.model.eval()
+
+    def __call__(self, texts):
+        tokenized = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
+
+        with torch.no_grad():
+            outputs = self.model(**tokenized)
+            logits = outputs.logits
+
+        probabilities = softmax(logits, dim=-1)
+        scores, labels = torch.max(probabilities, dim=-1)
+        labels_str = [self.model.config.id2label[label_idx] for label_idx in labels.tolist()]
+
+        return [{"label": label, "score": score.item()} for label, score in zip(labels_str, scores)]
+
+custom_pipeline = CustomPipeline(model_id)
+custom_pipeline(dataset['title'][:5])
+```
 # 4. 말 잘 듣는 모델 만들기
 ## 코딩 테스트 통과하기: 사전 학습과 지도 미세 조정
 ## 채점 모델로 코드 가독성 높이기
