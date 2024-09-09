@@ -136,7 +136,7 @@ LLM을 활용하는 방법
 그림 2.14   
 
 ### 2.3.3 코드로 보는 어텐션
-'''
+```
 class AttentionHead(nn.Module):
   def __init__(self, token_embed_dim, head_dim, is_causal=False):
     super().__init__()
@@ -156,7 +156,7 @@ class AttentionHead(nn.Module):
 
 attention_head = AttentionHead(embedding_dim, embedding_dim)
 after_attention_embeddings = attention_head(input_embeddings, input_embeddings, input_embeddings)
-'''
+```
 
 ### 2.3.4 멀티 헤드 어텐션
 멀티 헤드 어텐션 - 한번에 여러 어텐션 연산을 동시에 적용하여 성능을 더 향샹   
@@ -181,7 +181,7 @@ after_attention_embeddings = attention_head(input_embeddings, input_embeddings, 
 
 ## 2.5 인코더
 멀티 헤드 어텐션, 층 정규화, 피드 포워드 층이 반복되는 형태   
-'''
+```
 class TransformerEncoderLayer(nn.Module):
   def __init__(self, d_model, nhead, dim_feedforward, dropout):
     super().__init__()
@@ -198,7 +198,7 @@ class TransformerEncoderLayer(nn.Module):
     # 피드 포워드
     x = self.feed_forward(x)
     return x
-'''
+```
 
 ## 2.6 디코더
 디코더 블록에서는 **마스크 멀티 헤드 어텐션**과 **크로스 어텐션**(cross attention) 사용   
@@ -252,7 +252,7 @@ T5 - 구글이 개발하였으며 모든 자연어 처리 작업이 결국 '텍�
 
 ### 3.3.2 토크나이저 활용하기
 **토그나이저** - 텍스트를 토큰 단위로 나누고 각 토큰을 대응하는 토큰 아이디로 변환   
-'''
+```
 tokenized = tokenizer("토크나이저는 텍스트를 토큰 단위로 나눈다")
 print(tokenized)
 # {'input_ids': [0, 9157, 7461, 2190, 2259, 8509, 2138, 1793, 2855, 5385, 2200, 20950, 2],
@@ -267,12 +267,12 @@ print(tokenizer.decode(tokenized['input_ids']))
 
 print(tokenizer.decode(tokenized['input_ids'], skip_special_tokens=True))
 # 토크나이저는 텍스트를 토큰 단위로 나눈다
-'''   
+``` 
 토근화 결과 중 **token_type_ids**는 문장을 구분하는 역할   
 **attention_mask**는 해당 토큰이 패딩 토큰인지 실제 데이터인지에 대한 정보
 
 ### 3.3.3 데이터셋 활용하기
-'''
+```
 from datasets import load_dataset
 # 로컬의 데이터 파일을 활용
 dataset = load_dataset("csv", data_files="my_file.csv")
@@ -287,20 +287,20 @@ from datasets import Dataset
 import pandas as pd
 df = pd.DataFrame({"a": [1, 2, 3]})
 dataset = Dataset.from_pandas(df)
-'''
+```
 
 ## 3.4 모델 학습시키기
 ### 3.4.1 데이터 준비
-'''
+```
 train_dataset = klue_tc_train.train_test_split(test_size=10000, shuffle=True, seed=42)['test']
 dataset = klue_tc_eval.train_test_split(test_size=1000, shuffle=True, seed=42)
 test_dataset = dataset['test']
 valid_dataset = dataset['train'].train_test_split(test_size=1000, shuffle=True, seed=42)['test']
-'''
+```
 
 ### 3.4.2 트레이너 API를 사용해 학습하기
 허깅페이스는 학습에 필요한 다양한 기능을 학습 인자(Training Arguments)만으로 쉽게 활용할 수 있는 트레이너 API를 제공   
-'''
+```
 trainer = Trainer(
     model=model,
     args=training_args,
@@ -313,11 +313,11 @@ trainer = Trainer(
 trainer.train()
 
 trainer.evaluate(test_dataset) # 정확도 0.84
-'''   
+```   
 데이터셋을 준비하고 학습 인자를 설정하는데 필요한 몇 줄의 코드만으로도 모델 학습 가능   
 
 ### 3.4.3 트레이너 API를 사용하지 않고 학습하기
-'''
+```
 num_epochs = 1
 optimizer = AdamW(model.parameters(), lr=5e-5)
 
@@ -333,11 +333,11 @@ for epoch in range(num_epochs):
 # Testing
 _, test_accuracy = evaluate(model, test_dataloader)
 print(f"Test accuracy: {test_accuracy}") # 정확도 0.82
-'''   
+```   
 Trainer를 사용하면 간편하다는 장점이 있고, 사용하지 않으면 내부 동작을 명확히 할 수 있고 직접 학습 과정을 조절할 수 있음   
 
 ### 3.4.4 학습한 모델 업로드하기   
-'''
+```
 from huggingface_hub import login
 
 login(token="본인의 허깅페이스 토큰 입력")
@@ -347,12 +347,12 @@ trainer.push_to_hub(repo_id)
 # 직접 학습한 경우
 model.push_to_hub(repo_id)
 tokenizer.push_to_hub(repo_id)
-'''
+```
 
 ## 3.5 모델 추론하기
 ### 3.5.1 파이프라인을 활용한 추론
 허깅페이스는 토크나이저와 모델을 결합해 데이터의 전후처리와 모델 추론을 간단하게 수행하는 pipeline을 제공   
-'''
+```
 from transformers import pipeline
 
 model_id = "본인의 아이디 입력/roberta-base-klue-ynat-classification"
@@ -360,10 +360,10 @@ model_id = "본인의 아이디 입력/roberta-base-klue-ynat-classification"
 model_pipeline = pipeline("text-classification", model=model_id)
 
 model_pipeline(dataset["title"][:5])
-'''
+```
 
 ### 3.5.2 직접 추론하기
-'''
+```
 import torch
 from torch.nn.functional import softmax
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -389,7 +389,7 @@ class CustomPipeline:
 
 custom_pipeline = CustomPipeline(model_id)
 custom_pipeline(dataset['title'][:5])
-'''
+```
 
 # 4 말 잘 듣는 모델 만들기
 OpenAI는 요청과 답변 형식으로 된 지시 데이터셋을 통해 GPT-3가 사용자의 요청에 응답할 수 있도록 학습하고 사용자가 더 좋아하고 도움이 되는 답변을 생성할 수 있도록 추가 선호 학습을 진행   
@@ -405,13 +405,13 @@ OpenAI는 요청과 답변 형식으로 된 지시 데이터셋을 통해 GPT-3�
 2023년 스탠퍼드대학교에서 오픈 소스 라마(Llama) 모델을 추가 학습한 알파카(Alpaca) 데이터셋   
 - **지시사항**(instruction) / **입력**(input) / **출력**(output) / 앞의 것들을 정해진 포맷 하나로 묶은 데이터인 **텍스트**(text)
 
-'''
+```
 {
     "instruction": "Create a classification task by clustering the given list of items.",
     "input": "Apples, oranges, bananas, strawberries, pineapples",
     "output": "Class 1: Apples, Oranges\nClass 2: Bananas, Strawberries\nClass 3: Pineapples"
 }
-'''
+```
 
 ### 4.1.3 좋은 지시 데이터셋이 갖춰야 할 조건
 메타에선 라마 모델을 정렬하는데 선별한 1,000개 정도의 지시 데이터셋 리마(LIMA)로 사전 학습이 가능하다고 발표   
@@ -543,7 +543,7 @@ LLM과 같은 모델의 크기가 커지면서 모든 파라미터가 아닌 일
 마지막으로 어떤 파라미터를 재구성할지 결정해야 함   
 
 ### 5.4.3 코드로 LoRA 학습 사용하기
-'''
+```
 cleanup()
 print_gpu_utilization()
 
@@ -558,7 +558,7 @@ torch.cuda.empty_cache()
 #옵티마이저 상태의 메모리 사용량: 0.006 GB
 #그레디언트 메모리 사용량: 0.003 GB
 #GPU 메모리 사용량: 0.016 GB
-'''   
+``` 
 LoRA를 적용하니 전체 파라미터 대비 0.117%로 훨씬 줄어들어 학습하기 때문에 옵티마이저 상태의 메모리 사용량과 그레이디언트 사용량이 매우 줄어들었음   
 
 ## 5.5 효율적인 학습방법(PEFT): QLoRA
@@ -573,7 +573,7 @@ LoRA를 적용하니 전체 파라미터 대비 0.117%로 훨씬 줄어들어 �
 가상 메모리에서 운영체제는 램이 가득 차면 일부 데이터를 디스크로 옮기고 필요할 때 다시 램으로 데이터를 불러옴 - 페이징(paging)   
 
 ### 5.5.3 코드로 QLoRA 모델 활용하기
-'''
+```
 cleanup()
 print_gpu_utilization()
 
@@ -589,7 +589,7 @@ torch.cuda.empty_cache()
 #옵티마이저 상태의 메모리 사용량: 0.012 GB
 #그레디언트 메모리 사용량: 0.006 GB
 #GPU 메모리 사용량: 0.945 GB 
-'''   
+```  
 QLoRA를 사용할 경우 메모리 사용량이 절반 이하로 떨어짐  
 
 # 6 sLLM 학습하기
@@ -631,7 +631,7 @@ GPT를 활용한 성능 평가 파이프라인을 준비하기 위해서 필요�
 
 ### 6.2.3 SQL 생성 프롬프트
 LLM의 경우 학습에 사용한 프롬프트 형식을 추론할 때도 동일하게 사용해야 결과 품질이 좋기 때문에 지시사항과 데이터로 나눈 프롬프트를 동일하게 사용   
-'''
+```
 def make_prompt(ddl, question, query=''):
     prompt = f"""당신은 SQL을 생성하는 SQL 봇입니다. DDL의 테이블을 활용한 Question을 해결할 수 있는 SQL 쿼리를 생성하세요.
 
@@ -644,7 +644,7 @@ def make_prompt(ddl, question, query=''):
 ### SQL:
 {query}"""
     return prompt
-'''
+```
 
 ### 6.2.4 GPT-4 평가 프롬프트와 코드 준비
 GPT-4를 사용해 평가를 수행해야 하기 때문에 반복적으로 API를 요청해야 함   
@@ -654,7 +654,7 @@ OpenAI는 사용자에 따라 티어를 나누어 사용량 제한에 차등을 
 
 ## 6.3 실습: 미세 조정 수행하기
 ### 6.3.1 기초 모델 평가하기
-'''
+```
 import torch
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 
@@ -694,7 +694,7 @@ hf_pipe(example, do_sample=False,
 
 # ### SQL 봇의 결과:
 # SELECT COUNT(*) FROM players WHERE username LIKE '%admin%'; (생략)
-'''   
+```  
 위의 코드를 실행하면 요청에 맞춰 SQL은 잘 생성되었지만 반복적으로 'SQL 봇', 'SQL 봇의 결과'와 같이 추가적인 결과를 생성   
 형식에 맞춰 선호도가 높은 답변을 얻기 위해서는 추가적인 학습이 필요   
 
