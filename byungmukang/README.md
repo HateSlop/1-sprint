@@ -409,10 +409,68 @@ custom_pipeline(dataset['title'][:5])
   - ![](./pics/그림4_17.jpg) 
 # 5. GPU 효율적인 학습
 ## GPU에 올라가는 데이터 살펴보기
+  - fp32는 지수로 8비트, 가수로 23비트 사용
+  - fp16은 지수로 5비트, 가수로 10비트 사용
+  - bf16은 지수로 8비트, 가수로 7비트 사용
+  - 양자화: 숫자 표현을 더 작은 비트 크기로 줄여 모델 크기를 감소시키고 속도를 향상시키는 기법
+    + 예를 들어 fp32모델을 fp16형식으로 저장하면 용량이 절반, 그러나 성능 저하
+    + 낭비를 줄이기 위해서 K개의 데이터를 묶은 블록 단위로 양자화를 수행
+    + 퀀타일 방식: 입력 데이터를 크기 순으로 등수를 매겨 int8값에 동일한 개수의 fp32값이 대응하도록 배치하는 방식
++ GPU에 저장되는 데이터
+    + 모델 파라미터
+    + 그레이디언트
+    + 옵티마이저 상태
+    + 순전파 상태
 ## 단일 GPU 효율적으로 활용하기
+  - 그레이디언트 누적: 제한된 메모리 안에서 배치 크기를 키우는 것과 동일한 효과를 얻는 방법으로, 그레이디언트 누적 횟수를 4로 두면, 손실을 4로 나누어서 역전파를 수행하고, 4번의 스텝마다 모델을  업데이트하므로 배치 크기가 4배로 커진 것과 동일한 효과
+- ### 그레이디언트 누적
+```python
+def train_model(model, dataset, training_args):
+    if training_args.gradient_checkpointing:
+        model.gradient_checkpointing_enable()
+
+    train_dataloader = DataLoader(dataset, batch_size=training_args.per_device_train_batch_size)
+    optimizer = AdamW(model.parameters())
+    model.train()
+    gpu_utilization_printed = False
+    for step, batch in enumerate(train_dataloader, start=1):
+        batch = {k: v.to(model.device) for k, v in batch.items()}
+
+        outputs = model(**batch)
+        loss = outputs.loss
+        loss = loss / training_args.gradient_accumulation_steps # 손실을 나누어 역전파를 수행
+        loss.backward()
+
+        if step % training_args.gradient_accumulation_steps == 0: #4번의 스텝마다 업데이트
+            optimizer.step()
+            gradients_memory = estimate_memory_of_gradients(model)
+            optimizer_memory = estimate_memory_of_optimizer(optimizer)
+            if not gpu_utilization_printed:
+                print_gpu_utilization()
+                gpu_utilization_printed = True
+            optimizer.zero_grad()
+
+    print(f"옵티마이저 상태의 메모리 사용량: {optimizer_memory / (1024 ** 3):.3f} GB")
+    print(f"그레디언트 메모리 사용량: {gradients_memory / (1024 ** 3):.3f} GB")
+```
+  - 그레이디언트 체크포인팅: 순전파의 전체를 저장하거나 마지막만 저장하는 것이 아닌, 중간중간에 값들을 저장해 메모리 사용량을 줄이고 필요한 경우 체크포인트부터 다시 계산해 순전파 계산량을 줄이는 방식
+- ![](./pics/그림5_9.jpg)
 ## 분산 학습과 ZeRO
+  - 분산 학습: GPU를 여러 개 활용해 딥러닝 모델을 학습
+  - 데이터 병렬화: 여러 GPU에 각가 모델을 올리고 학습 데이터를 병렬로 처리해 학습 속도를 높이는 방식
+  - ![](./pics/그림5_11.jpg)
+  - 위 그림 기준 그림의 상하로 나누면(머신 1,2와 머신3,4) 파이프라인 병렬화, 좌우로 나누면(머신 1,3과 머신2,4) 텐서 병렬화
+  - 분산 학습을 이용할 경우 모델이 작으면 학습 속도를 높일 수 있고, 모델이 클 경우 학습이 불가능했던 모델의 학습 가능
+  - ZeRO(Zero Redundanct Optimzer): 마이크로소프트에서 개발한 기술
+    + 불필요하게 중복되는 메모리를 최소화함으로써 GPU 메모리 효울성 극대화
 ## 효율적인 학습 방법(PEFT): LoRA
+  - LoRA: LLM을 효율적으로 미세 조정하는 기법
+    + 전체 모델의 가중치를 업데이트 하는 대신, 특정 가중치 행의 저차원 근사로 학습
+  - ![](./pics/그림5_16.jpg)
+  - ![](./pics/그림5_17.jpg)
 ## 효율적인 학습 방법(PEFT): QLoRA
+  - QLoRA: LoRA의 저차원 근사 기법에 양자화(quantization)를 적용해, 메모리와 계산 효율을 한층 더 극대화한 방식
+  - 페이지 옵티마이저: 통합 메모리를 통해 GPU가 CPU 메모리를 공유하는 것
 # 6. sLLM 학습하기
 ## Text2SQL 데이터셋
 ## 성능 평가 파이프라인 준비하기
