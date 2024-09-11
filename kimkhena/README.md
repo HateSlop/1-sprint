@@ -41,7 +41,7 @@
 + 사전 학습 - 대량의 데이터로 모델을 학습
 + 미세 조정 - 특정 데이터를 해결하기 위한 추가 학습 (이 학습 모델을 사용하는 과제를 downtream 과제라도 부른다)
 
-![전이 학습 방식](https://github.com/user-attachments/assets/8afb45e7-5d8b-4247-9d20-98d79d9ace70)
+![전이 학습 방식](./picture/photo_2024-09-11_23-02-14.jpg)
 본체 - 이미지넷으로 학습한 모델 (점이나 선같은 기본적인 이미지 특징을 이미 파악해 놓은 데이터셋)
 ___ 분류헤드 - 해결하려는 이미지의 데이터셋을 추가 학습
 
@@ -54,10 +54,10 @@ ___ 분류헤드 - 해결하려는 이미지의 데이터셋을 추가 학습
 **시퀀스 데이터** - 순서대로 정열된 데이터의 연속. 텍스트, 오디오, 시계열 데이터 등이 이에 해당하며, 이를 처리하기 위해 **RNN** 또는 **트랜스포머**를 사용한다.
 
 **RNN(Recurrent Neural Network)** - 트랜스포머 아키텍처를 사용하기 전 텍스트를 생성하기위해 사용되었던 모델. 정보가 쌓이면서 텍스트 맥락이 압축된다. 단점: 앞에 있는 단어들의 의미가 희석된다
-![입력을 순차적으로 처리하는 RNN 모델의 방식](https://github.com/user-attachments/assets/8afb45e7-5d8b-4247-9d20-98d79d9ace70)
+![입력을 순차적으로 처리하는 RNN 모델의 방식](./picture/photo_2024-09-11_23-02-22.jpg)
 
 **트랜스포머 아키텍쳐** - 문장 속 단어와 같은 순차 데이터 내의 관계를 추적해 맥락과 의미를 학습하는 신경망. 맥락 데이터를 모두 활용한다. 무겁고 비효율적인 연산을 한다. 그러나 RNN의 단점(느린 학습 속도, 긴 시퀀스 처리 성능 저하)을 극복하고 병렬 연산을 가능하다.  
-![트랜스포머 아키텍쳐의 어텐션 연산](https://github.com/user-attachments/assets/8afb45e7-5d8b-4247-9d20-98d79d9ace70)
+![트랜스포머 아키텍쳐의 어텐션 연산](./picture/photo_2024-09-11_23-02-21.jpg)
 
 * 결론: RRN은 효율적이지만 성능이 낮다. 트랜스포머 아키텍쳐는 성능이 높지만 효율이 낮다. 하지만 병렬처리를 통해 학습속도를 높일 수 있어 대부분 LLM이 트랜스포머 아키텍처를 사용 한다.
 
@@ -125,7 +125,7 @@ AI분야는 다양한 방향으로 연구가 진행되고 발전해 나가고 �
 - 디코더에서 층 정규화(layer normalization), 멀티 헤드 어텐션(multi-head attention)을 수행하면서 크로스 어텐션 연산을 한다
 - 디코더와 인코더의 출력을 종합해서 피드 포워드 층을 거쳐 결과를 생산한다.
 
-![트랜스포머 아키텍쳐를 구성하는 인코더와 디코더](../static/img_2.2_텍스트_임베딩.png)
+![트랜스포머 아키텍쳐를 구성하는 인코더와 디코더](./picture/photo_2024-09-11_23-02-19.jpg)
 > 트랜스포머 아키텍쳐를 구성하는 인코더와 디코더
 
 ## 2.2 텍스트를 임베딩으로 변환하기
@@ -134,7 +134,7 @@ AI분야는 다양한 방향으로 연구가 진행되고 발전해 나가고 �
 2) 토큰 ID를 **토큰 임베딩 층**을 통해 여러 숫자의 집합인 **토큰 임베딩**으로 변환한다.
 3) **위치 인코딩**을 통해 토큰의 위치 정보를 담고 있는 임베딩을 추가 해 최종적으로 모델에 입력 할 임베딩을 만든다. 
 
-![텍스트에서 임베딩으로 변환하는 과정](../static/img_2.2_텍스트_임베딩.png)
+![텍스트에서 임베딩으로 변환하는 과정](./picture/photo_2024-09-11_23-02-18.jpg)
 > 텍스트에서 임베딩으로 변환하는 과정
 
 ### 2.2.1 토큰화 
@@ -148,7 +148,7 @@ AI분야는 다양한 방향으로 연구가 진행되고 발전해 나가고 �
 3) ID 딕셔너리를 만든다. (ID를 순서대로 각각 단어에게 부여된다) (idx2str)
 4) ID 딕셔너리에서 토큰을 토큰 딕셔너리에서 가져온 토큰 ID로 변환한다.
 
-![토큰화 방식](../static/img_2.2_텍스트_임베딩.png)
+![토큰화 방식](./picture/photo_2024-09-11_23-02-17.jpg)
 > 등장빈도와 단위에 따른 서브워드 토큰화 방식
 
 
@@ -197,19 +197,19 @@ AI분야는 다양한 방향으로 연구가 진행되고 발전해 나가고 �
 가중치를 통해 토큰과 토큰 사이에 관계를 계산하는 능력을 학습시킨다.
 
 스케일 점곱 방식의 어텐션 연산 코드:
-1)가중치 계산
+1) 가중치 계산
 1.1) PyTorch에서 제공하는 nn.Linear 층을 사용해 쿼리,키,값 각각의 가중치를 생성한다. 
 1.2) 입력 임베딩(input_embedding)을 선형 층에 통과시켜 쿼리, 키, 값을 생성한다.
-2)쿼리, 키, 값 관계 를 계산한 새로운 단어 벡터 생성 
+2) 쿼리, 키, 값 관계 를 계산한 새로운 단어 벡터 생성 
 2.1) 쿼리와 키를 곱해 두 단어의 관련성을 계산한다. (분산이 커지는 것을 방지하기 위해 임베딩 차원 수의(dim_k)의 제곱근으로 나눈다.)
-2.2) 그 값들을 스포트맥스(softmax)를 취해 0-1사이에 값으로 바꿔서 가중치로 바꾼다.
+2.2) 그 값들을 소프트맥스(softmax)를 취해 0-1사이에 값으로 바꿔서 가중치로 바꾼다.
 2.3) 가중치와 값을 곱해 입력은 동일하면서 주변 토큰과의 관련도에 따라 새로운 토큰 임베딩을 반환한다
 이로서 트랜스포머에서는 쿼리,키,값을 토큰 임베딩 하여 가중치를 통해 변환한다. 이 세가지 가중치를 통해 토큰과 토큰 사이에 관계를 계산해 적절한 주변 맥락을 반영하는 학습을 시킨다.
 
-![가중치 계산](../static/img_2.2_텍스트_임베딩.png)
+![가중치 계산](./picture/photo_2024-09-11_23-02-30.jpg)
 > 가중치 계산
 
-![값 벡터를 가중합해서 새로운 단어 벡터 생성](../static/img_2.2_텍스트_임베딩.png)
+![값 벡터를 가중합해서 새로운 단어 벡터 생성](./picture/photo_2024-09-11_23-02-29.jpg)
 > 값 벡터를 가중합해서 새로운 단어 벡터 생성
 
 ### 2.3.4 멀티 헤드 어텐션 
@@ -222,3 +222,680 @@ AI분야는 다양한 방향으로 연구가 진행되고 발전해 나가고 �
 2) 쿼리, 키, 값의 각각 어텐션 계산한다
 3) 어텐션 결과를 다시 원래 현태로 변환한다
 4) 마지막으로 선형 층을 통과시키고 최종 어텐션 결과를 반환한다.
+
+## 2.4 정규화와 피드 포워드 층 
+
+**정규화** - 딥러닝 모델에서 입력이 일정한 분포를 갖도록 만들어 학습이 안정적이고 빨라질 수 있도록 하는 기법이다. 
+
+과거에는 배치 정규화를 사용하였지만, 지금은 트랜스포머 아키텍처에서는 특정 차원에서 정규화를 수행하는 층 정규화를 사용한다. 
+
+어텐션 연산 - 단어와 단어 사이 의미를 계산하여 토큰 임베딩을 조정하는 연산
+피드 포워드 층 - 전체 입력 문장을 계산하여 연산
+
+### 2.4.1 층 정규화 이해하기 
+
+딥러닝 모델에서 **정규화가 필요한 이유**: 입력 데이터가 딥러닝 모델의 각 층을 거치면서 어떤 특성은 좁은 분포를 갖고 어떤 특성은 넓은 분포를 갖게 된다. 특히 층이 깊은 모델에서는 분포 의 차이가 발생할 가능성이 높아지고 그렇게 되면 학습이 잘되지 않는다. 그래서 입력 변수가 데이터 분포를 비슷한 범위 내에 조정하여 <u>정확한 예측</u>을 하기 위해서다. 
+
+다음과 같은 식으로 계산한다. 벡터 x를 정규화한 norm_x는 벡터 x에서 x의 평균을 빼고 x의 표준편차로 나 눠 평균이 0이고 표준편차가 1인 분포를 갖게 된다.
+- `norm x = (x-평균)/표준편차` 
+
+일반적으로 이미지 처리에서는 배치 정규화를 사용하고, 자 연어 처리에서는 층 정규화를 사용한다.
+
+**배치 정규화** -모델에 입력으로 들어가는 미니 배치 사이에 정규화를 수행.
+
+**배치 정규화의 한계**: 자연어 처리에서는 입력으로 들어가는 문장의 길이가 다양해서 정규화에 포함되는 데이터의 수가 제각각이라 정 규화 효과를 보장하기 어렵다.
+
+예시:
+![그림 2.18 자연어 처리에서 배치 정규화의 한계](./picture/photo_2024-09-11_23-02-28.jpg)
+
+<u>층 정규화</u>는 이런 단점을 보완한다.
+
+**층 정규화** - 토큰 임베딩의 평균과 표준편차를 구해 정규화를 수행한다.
+
+![그림 2.19 자연어 처리에서 층 정규화의 장점](./picture/photo_2024-09-11_23-02-27.jpg)
+ 
+층 정규화를 작용하는 순서로 옛날에는 사후 정규화를 사용하였지만 요즘에는 사전 정규화를 사용한다.
+**사전 정규화** - 층 정규화를 적용하고 어텐션과 피드 포워드 층을 통과하는 방법
+
+![그림 2.20 (a) 사후 정규화와 (b) 사전 정규화](./picture/photo_2024-09-11_23-02-26.jpg)
+
+
+### 2.4.2 피드 포워드 층
+
+**피드 포워드 층feed forward layer **- 데이터의 특징을 학습하는 완전 **연결 충fully connected layer** 말한다.
+
+코드와 같이 <u>선형 중, 드림아웃 중, 중 정규화, 활성 함수</u>로 구성된다. 
+쉽게 층을 쌓아 확장 하기 위해 입력과 출력의 형태가 동일하도 록 맞춘다.
+
+```
+
+class PreLayerNormFeedForward(nn.Module):
+  def __init__(self, d_model, dim_feedforward, dropout):
+    super().__init__()
+    self.linear1 = nn.Linear(d_model, dim_feedforward) # 선형 층 1
+    self.linear2 = nn.Linear(dim_feedforward, d_model) # 선형 층 2
+    self.dropout1 = nn.Dropout(dropout) # 드랍아웃 층 1
+    self.dropout2 = nn.Dropout(dropout) # 드랍아웃 층 2
+    self.activation = nn.GELU() # 활성 함수
+    self.norm = nn.LayerNorm(d_model) # 층 정규화
+
+  def forward(self, src):
+    x = self.norm(src)
+    x = x + self.linear2(self.dropout1(self.activation(self.linear1(x))))
+    x = self.dropout2(x)
+    return x
+```
+
+## 2.5 인코더 
+
+
+인코더는 멀티 헤드 어텐션, 층 정규화, 피드 포워드 층이 반복되는 형태다.   
+잔차 연결 - 입력을 다시 더해주는 형태. 멀티 헤드 어텐션, 층 정규화, 피드 포워드 층를 연결해서 안정적인 학습 가능하다
+
+### 2.6 디코더 
+
+**디코더,인코더 첫 번째 차이:** 인코더: 기본적인 멀티 헤드 어텐션을 사용. 디코더: **마스크 멀티 헤드** 어텐션을 사용. 
+
+디코더는 **인과적causal **또는 **자기 회귀적auto-regressive** 특징을 갖는다.(  앞에서 생성한 토큰을 기반으로 다음 토큰을 생성한다.)
+
+미래 시점에 작성해야 하는 텍스트를 미리 학습하지 않기 위해 그 이 전에 생성된 토큰까지만 확인 할 수 있도록 마스크를 추가한다.
+
+1) 대각선 아래 부분만 1을 추가, 나머지는 음의 무한대로 마스크를 만든다.
+2) 가중치를 만들기 위해 소프트맥스를 취할떄 마스크가 된 곳은 음의 무한대로 가중치가 0이 된다. 
+
+![그림 2.23 마스크 연산](./picture/photo_2024-09-11_23-02-24.jpg)
+
+**디코더,인코더 두 번째 차이:** 인코더의 결과를 디코더가 활용하는** 크로스 어텐션** (다른 두 데이터 집합 간의 상관관계를 학습하는 방식)연산이 있다.
+
+## 2.7 BERT, GPT, T5등 트랜스포머를 활용한 아키텍처
+
+트랜스포머 아키텍처를 활용한 모델. 
+1. 인코더만 활용해 자연어 이해 작업에 집중한 그룹 
+2. 디코더만 활용해 자연어 생성 작업에 집중한 그룹
+3. 인코더와 디코더를 모두 활용해 더 넓은 범위의 작업을 수행할 수 있도록 한 그룹 
+
+![표 2.1 각 모델 그룹의 장단점](./picture/photo_2024-09-11_23-02-23.jpg)
+
+## 2.8 주요 사전 학습 메커니즘 
+
+### 2.8.1 인과적 언어 모델링 
+**인과적 언어 모델링** - 문장의 시작부터 끝까지 순차적으로 단어를 예측하는 방식. 이전 단에를 바탕으로 다음 단어를 예측
+
+'A라는 단어 다음에는 B라는 단어가 자주 온다'는 직관을 배운다. 언어 모델도 인과적 언어 모델링 방식으로 많은 데이터에 대해 다음 단어를 예측하는 방법을 학습함으로써 <u>더 가능성이 높은 단어를 생성</u> 하는 능력을 갖추게 된다.
+
+GPT 같은 생성 트랜스포머 모델에서는 인과적 언어 모델링을 핵심적인 학습 방법으로 사용한다.
+
+### 2.8.3 마스크 언어 모델링
+
+**마스크 언어 모델링** - 입력 단어의 일부를 마스크 처리하고 그 단어를 맞추는 작업으로 모델을 학습 시킨다
+
+![그림 2.28 MLM 학습 방식](./picture/photo_2024-09-11_23-02-34.jpg)
+
+# 03 트랜스포머 모델을 다루기 위한 허깅페이스 트랜스포머 라이브러리
+
+## 3.1 허깅페이스 트랜스포머란
+**허깅페이스 트랜스포머** - 공통된 인터페이스로 다양한 트랜스포머 모델을 활용할 수 있도록 지원하는 오픈소스 라이브러리.
+
+허깅페이스 제공하는 라이브러리:
+-  트랜스포머 모델과 토크나이저를 활용할 때 사용하는 **transformers 라이브러리**
+- 데이터셋을 공개하고 쉽게 가져다 쓸 수 있도록 지원하는 **datasets 라이브 러리** 
+
+> 예제 3.1. BERT와 GPT-2 모델을 활용할 때 허깅페이스 트랜스포머 코드 비교
+
+
+```
+from transformers import AutoTokenizer, AutoModel
+
+text = "What is Huggingface Transformers?"
+# BERT 모델 활용
+bert_model = AutoModel.from_pretrained("bert-base-uncased")
+bert_tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+encoded_input = bert_tokenizer(text, return_tensors='pt')
+bert_output = bert_model(**encoded_input)
+# GPT-2 모델 활용
+gpt_model = AutoModel.from_pretrained('gpt2')
+gpt_tokenizer = AutoTokenizer.from_pretrained('gpt2')
+encoded_input = gpt_tokenizer(text, return_tensors='pt')
+gpt_output = gpt_model(**encoded_input)
+```
+
+## 3.2 허깅페이스 허브 탐색하기
+
+**허깅페이스의 허브** -  다양한 사전 학습 모델과 데이터셋을 탐색하고 쉽게 불러와 사용 할 수 있도록 제공하는 기능.
+
+**Spaces** - 자신의 모델 데모를 제공하고 다른 사람의 모델을 사용해 볼 수 있는 기능
+
+### 3.2.1 모델 허브
+모델 허브에는 작업, 언어 등다양한 기준으로 모델이 분류되어 있는 모델들을 제공한다.
+
+### 3.2.2 데이터셋 허브
+데이터셋 허브는 모델 허브와 거의 비슷한 형태로 데이터셋 크기, 유형 등 분류 기준이 추가 되어 있다. 또한 선택한 기준에 맞는 데이터셋을 보여준다. 
+
+### 3.2.3 모델 데모를 공개하고 사용할 수 있는 스페이스 
+**스페이스** - 사용자가 자신의 모델 데모를 간편하게 공개할 수 있는 기능이다.
+
+또한 허깅페이스는 <u>다양한 오픈소스 LLM</u>과 그 <u>성능 정보</u>를 게시하는 **리더보드 Leaderboardg** 운영하고 있다.
+
+많은 오픈소스 모델이 새롭게 공개 되고 있기 때문에 어떤 모델을 사용하는 것이 좋을지 판단하기 쉽지 않다. 이럴 때 리더보드를 살펴보면 각 모델의 크기와 성능을 한눈에 비교할 수 있기 때문에 탐색에 큰 도움이 된다.
+
+## 3.3 허깅페이스 라이브러리 사용법 익히기
+모델을 학습시키거나 추론하기 위해서는 모델, 토크나이저, 데이터셋이 필요한다. 이번 절에서  코드를 통해 사용하는 법을 익힌다.
+### 3.3.1 모델 활용하기
+
+허깅페이스에서는 모델을** 바디body**와 **헤드head**로 구분한다.
+바디 - 모델의 기본 구조
+헤드 - 특정 작업을 처리하도록 설계된 부분
+
+![그림 3.9 바디와 헤드의 구분이 필요한 이유](./picture/photo_2024-09-11_23-02-43.jpg)
+
+### 3.3.2 토크나이저 활용하기 
+**토크나이처** - 텍스트를 토큰 단위로 나누고 각 토큰을 대응하는 토큰 아이디로 변환한다. 필요한 경우 특수 토큰을 추가하는 역할도 한다.
+
+토크나이저도 허깅페이스 모델 저장소 아이디를 통해 불러올 수 있다. 허깅페 이스 허브에서 **모델**(config.json)과 **토크나이저**((tokenizer_config.json - 토크나이저의 종류나 설정) (tokenizer.json - 실제 어휘 사전)를 불러오는 경우 동일한 모델 아이디로 맞춰야 한다.
+
+> 예제 3.8. 토크나이저 불러오기
+```
+from transformers import AutoTokenizer
+model_id = 'klue/roberta-base'
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+```
+> 예제 3.9. 토크나이저 사용하기
+
+```
+tokenized = tokenizer("토크나이저는 텍스트를 토큰 단위로 나눈다")
+print(tokenized)
+# {'input_ids': [0, 9157, 7461, 2190, 2259, 8509, 2138, 1793, 2855, 5385, 2200, 20950, 2],
+#  'token_type_ids': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+#  'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+
+print(tokenizer.convert_ids_to_tokens(tokenized['input_ids']))
+# ['[CLS]', '토크', '##나이', '##저', '##는', '텍스트', '##를', '토', '##큰', '단위', '##로', '나눈다', '[SEP]']
+
+print(tokenizer.decode(tokenized['input_ids']))
+# [CLS] 토크나이저는 텍스트를 토큰 단위로 나눈다 [SEP]
+
+print(tokenizer.decode(tokenized['input_ids'], skip_special_tokens=True))
+# 토크나이저는 텍스트를 토큰 단위로 나눈다
+```
+
+특수 토큰:
+[CLS]: 주로 문장을 시작하는 토큰 , 주로 분류 작업에 사용된다.
+[SEP]: 주로 문장을 끝내는 토큰, 두 문장을 토큰하면 구분하는 역할도 한다
+
+### 3.3.3 데이터 셋 활용하기 
+
+datasets 라이브러리를 사용하면 앞서 허깅페이스 허브에서 살펴봤던 데이터셋을 코드로 불러올 수 있다.
+
+> 예제 3.15. KLUE MRC 데이터셋 다운로드
+
+```
+from datasets import load_dataset
+klue_mrc_dataset = load_dataset('klue', 'mrc')
+# klue_mrc_dataset_only_train = load_dataset('klue', 'mrc', split='train')
+```
+
+로컬 데이터 셋을 다운로드 받고 싶다면 예제에 있는 코드로 파일이나 파이썬 객체를 받아 사용 할 수 있다.
+아래 코드를 실행하기 위해서는 구글 코랩에 csv 파일이 업로드 되어야 한다.
+>예제 3.16. 로컬의 데이터 활용하기
+
+```
+from datasets import load_dataset
+# 로컬의 데이터 파일을 활용
+dataset = load_dataset("csv", data_files="my_file.csv")
+
+# 파이썬 딕셔너리 활용
+from datasets import Dataset
+my_dict = {"a": [1, 2, 3]}
+dataset = Dataset.from_dict(my_dict)
+
+# 판다스 데이터프레임 활용
+from datasets import Dataset
+import pandas as pd
+df = pd.DataFrame({"a": [1, 2, 3]})
+dataset = Dataset.from_pandas(df)
+```
+
+## 3.4 모델 학습시키기
+한국어 기사 제목을 바탕으로 기사의 카테고리를 분류하는 텍스트 분류 모델을 학습하는 실습 진행
+
+## 3.5 모델 추론하기 
+### 3.5.1 파이프라인을 활용한 추론
+
+허깅페이스는 토크나이저와 모델을 결합해 데이터의 전후처리와 모델 추론을 간단하게 수행하는 pipeline을 제공한다.
+
+>학습한 모델을 불러와 pipeline을 활용해 추론하기
+
+```
+from transformers import pipeline
+
+model_id = "본인의 아이디 입력/roberta-base-klue-ynat-classification"
+
+model_pipeline = pipeline("text-classification", model=model_id)
+
+model_pipeline(dataset["title"][:5])
+```
+
+### 3.5.2 직접 추론하기 
+
+>예제 3.31. 커스텀 파이프라인 구현
+
+
+```
+import torch
+from torch.nn.functional import softmax
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+#CustomPipeline의 인스턴스를 호출할 때 내부적으로 _call_ 메서드를 사용하는데, tokenizer를 통해 토큰화를 수행
+class CustomPipeline:
+    def __init__(self, model_id):
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self.model.eval()
+
+    def __call__(self, texts):
+        tokenized = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
+#모델 추론을 수행
+        with torch.no_grad():
+            outputs = self.model(**tokenized)
+            logits = outputs.logits
+#가장 큰 예측 확률을 갖는 클래스를 추출해 결과로 반환
+        probabilities = softmax(logits, dim=-1)
+        scores, labels = torch.max(probabilities, dim=-1)
+        labels_str = [self.model.config.id2label[label_idx] for label_idx in labels.tolist()]
+
+        return [{"label": label, "score": score.item()} for label, score in zip(labels_str, scores)]
+
+custom_pipeline = CustomPipeline(model_id)
+custom_pipeline(dataset['title'][:5])
+```
+# 04 말 잘 듣는 모델 만들기 
+## 4.1 코딩 테스트 통과하기: 사전 학습과 미세 조정
+### 4.1.1 코딩 개념 익히기: LLM의 사전 학습 
+
+라마 모델 LLM의 사전 학습 방법: 코드,블로그, 기사, 광고 등 약 10TB 분량의 여러가지 글을 학습하게 한다. 
+
+사전 학습 동안은 ILM이 언어에 대한 전체적인 이해도가 높아지고 바로 다음에 올 단어 를 점점 더 잘 예측하게 된다.
+
+다음 단어를 예측하는 언어 모델을 학습시킬 때는 학습 데이터의 일부를 입력으로 넣고 바로 다음에 나오는 정답 토큰을 맞추도록 학습한다. 그림에 보이듯이 수많은 학습 데이터에 대해 수행하면서 어떤 단어가 다음에 올지 학습하게 된다.
+
+>언어 모델은 정답 토큰이 올 확률을 높이는 방식으로 학습한다
+
+![그림 4.3 언어 모델은 정답 토큰이 올 확률을 높이는 방식으로 학습한다](./picture/photo_2024-09-11_23-02-42.jpg)   
+
+### 4.1.2 연습문제 풀어보기: 지도 미세 조정
+**지도 미세 조정** - 사전 학습한 모델링 토대로 요청의 형식을 적절히 해석하고, 응당의 형태를 적절히 작성하며, 요청과 응답이 잘 연결되도록 추가 학습하는 것 
+
+- 지도 미세 조정의 **지도**는 학습 데이터에 정답이 포함되어 있다는 뜻이다.
+- 정렬: 사용자의 요청과 LLM의 응답이 정렬되도록 하는 것
+
+**지시 데이터 셋** - 사용자가 요청한 사항에 대한 적절한 응답을 정리한 데이터 셋
+
+문제점: 딥러닝 모델은 학습 데이터에 의존해 행동을 학습하므로, 요청에 응답하는 데이터가 적으면 그 행동을 잘 학습하지 못한다.
+
+이런 문제를 보완하기 위해 사용자의 요구사항과 그에 대한 응답(정답)을 구조화한 데 이터를 구축하고 언어 모델의 학습에 활용한다.
+
+지도 미세 조정도 사전 학습처럼 다음 단어를 예측하는 인과적 언어 모델링 causal language modeling을 사용해 학습한다.
+
+### 4.1.3 좋은 지시 데이터셋이 갖춰야 할 조건 
+- 지시 데이터셋에서 지시사항이 다양한 형태로 되어 있고 응답 데이터의 품질이 높을수록 정렬한 모델의 답변 품질이 높아진다.
+- 가설: 적지만 가치가 높은 데이터셋이 많지만 품질이 떨어지는 데이터셋보다 높은 성능을 달성 할 수 있다.
+
+피상적 정렬 가설: 모델의 지식이나 능력은 사전 학습 단계에서 대부분 학습하고 정렬 데이터를 통해서는 답변의 형식이나 모델이 능력과 지식을 어떻게  나열하는지 정도만 추가로 배움
+
+ **좋은 지시 데이터셋이 갖춰야 할 조건 **
+- 지시 데이터셋을 작은 규모로 구축하더라도 모델이 지시사항의 형식을 인식하고 답변하도록 만들 수 있다.
+-지시사항이 다양한 형태이고 답변의 품질이 높을수록 모델의 답변 품질도 높아진다.
+- 학습 데이터의 품질을 높이기 위해 모델의 목적에 맞춰 학습 데이터의 교육적 가 치를 판단하고 교육적 가치가 낮은 데이터를 필터링하는 방법을 사용할 수 있다.
+- 교재의 예제 데이터와 같은 고품질의 데이터를 학습 데이터에 추가하면 성능을 크 게 높일 수 있다.
+
+## 4.2 채점 모델로 코드 가독성 높이기
+### 4.2.1 선호 데이터셋을 사용한 채점 모델 만들기
+선호 데이터셋: 두 데이터 중 사람이 더 선호하는 데이터를 모은 데이터셋
+
+선호 점수를 매기지 않는 이유: 코등서 직접 매긴 데이터셋은 구축하기 어려움.
+
+![그림 4.10 챗GPT를 학습하는 과정에서의 선호 데이터셋 구축과 리워드 모델 학습](./picture/photo_2024-09-11_23-02-40.jpg)   
+
+### 4.2.2 강화 학습: 높은 코드 가독성 점수를 향해 
+**RLHF(Reinforcement Learning from Human Feedback)** - 사람의 피드백을 이용한 강화 학습
+
+![그림 4.11 강화 학습에서 에이전트가 학습하는 방식](./picture/photo_2024-09-11_23-02-39.jpg)   
+**에이전트**는 보상을 많이 받으려고 행동을 수정하고 학습한다. 이 **보상**을 받기 위해서는 **행동**을 하여 **환경**의 **상태**를 바꿔야 한다. 이 모든 행동을 연속적으로  수행하는 행동의 모음을 **에피소드**라고 한다. 
+
+![그림 4.12 강화 학습의 관점에서 나타낸 코딩 테스트 문제 풀이와 채점 과정](./picture/photo_2024-09-11_23-02-38.jpg)   
+![그림 4.13 강화 학습의 관점에서 언어 모델의 텍스트 평가 과정](./picture/photo_2024-09-11_23-02-37.jpg) 
+
+### 4.2.3 PPO: 보상 해킹 피하기 
+문제점: 강화 학습 중 그런데 이때 보상을 높게 받는 데에만 집중하는 보상 **해킹reward hacking** 이 발생할 수 있다. 
+예를 들어, 코드 가독성 점수를 높게 받는 방법으로 깔끔한 코드를 작성하는 게 아니라 아예 코드를 작성하지 않거나 print("hello world") 같은 간단한 코드만 작성해서 코드 가득성 점수를 높게 받으려고 할 수 있다.
+
+해결법: **PPO 강화 학습 ** - 지도 미세 조정 모델을 기준으로 학습하는 모델이 너 무 멀지 않게 가까운 범위에서 리워드 모델의 높은 점수를 찾도록 한다는 의미
+
+ ### 4.2.4 RLHF: 멋지지만 피할 수 있다면...
+
+LHF의 어려움
+- 성능이 높고 일관성 있는 리워드 모델이 필요
+- 참고 모델, 학습 모델, 리워드 모델 총 3개의 모델이 필요하기 때문에 GPU와 같은 리소스가 더 많이 필요하다.
+- 하리퍼파라미터에 민감하다
+
+## 4.3 강화 학습이 꼭 필요할까?
+### 4.3.1 기각 샘플링: 단순히 가장 점수가 높은 데이터를 사용한다면?
+
+기각 샘플링 - 지도 미세 조정을 마친 LLM을 통해 여러 응답을 생성하고 그중에서 리워드 모델이 가장 높은 점수를 준 응답을 모아 다시 지도 미세 조정을 수행한다. 
+
+장점: 강화 학습을 사용하지 않기 때문에 학습 이 비교적 안정적이고 간단하고 직관적인 방법임에도 효과가 좋아 많이 활용된다
+
+> 그림 4.16 라마-2의 학습 과정에 사용된 기각 샘플링
+![그림 4.16 라마-2의 학습 과정에 사용된 기각 샘플링](./picture/photo_2024-09-11_23-02-35.jpg)   
+
+### 4.3.2 DPO: 선호 데이터셋을 직접 학습하기
+
+DPO 방식 : 리워드 모델이나 강화 학습을 사용하지 않고 선호 데이터셋을 직접 학습한다
+DPO 방 법은 RLHF에 비해 훨씬 단순하면서 효과적이어서 많은 연구자와 개발자들이 환호했다.
+
+![그림 4.17 DPO와 RLHF의 차이](./picture/photo_2024-09-11_23-02-50.jpg)   
+
+### 4.3.3 DPO를 사용해 학습한 모델들
+
+# 2부 LLM 길들이기
+
+# 05 GPU 효율적인 학습 
+
+
+
+## 5.1 GPU에 올라가는 데이터 살펴보기 
+
+### 5.1.1. 딥러닝 모델의 데이터 타입
+
+**딥러닝 모델**이 입력 데이터를 처리해 결과를 내놓을 때까지 많은 **행렬 곱셈 연산**을 처리한다.
+
+**GPU**는 이렇게 단순한 곱셈을 동시에 여러 개 처리하는 데 특화된 처 리 장치다. 따라서 딥러닝 모델의 연산을 빠르게 처리하기 위해 GPU를 많이 활용한다.
+
+딥러닝 모델은 과거에 32비트 부동소수점 형식을 사용했지만, 모델의 파라미터가 늘어나면서 메모리 용량과 계산 시간 문제가 발생했다. 이를 해결하기 위해 성능을 유지하면서 더 적은 비트의 데이터 타입을 사용하는 방향으로 발전했다.
+ 
+S - 부호 sign 
+E -  지수 exponent - 수를 표현할 수 있는 범위의 크기를 결정한다
+M - 가수 mantissa -표현할 수 있는 수의 촘촘함을 결정한다
+
+![그림 5.1 데이터 형식에 따른 표현 범위](./picture/photo_2024-09-11_23-02-49.jpg)   
+
+### 5.1.2. 양자화로 모델 용량 줄이기
+**양자화** - 더 적은 비트로 모델을 표현하는 기술
+
+모델 파라미터의 데이터 타입이 더 많은 비트를 사용할수록 모델의 용량이 커지기 때문에 필요한 기술이다.
+
+그러나 변환하면 정보가 정보가 소실되어,  <u>양자화를 수행하면 딥 러닝 모델의 성능이 저하된다</u>. 따라서 양자화 기술에서는 더 적은 비트를 사용하면서도 원본 데이터의 정보를 최대한 소실 없이 유지하는 것이 핵심 과제라고 할 수 있다.
+
+**퀀타일 방식** - 입력 데이터를 크기 순으로 등수를 매겨 int8값에 동일한 개수의 fp32값이 대응하도록 배치하는 방식. 
+
+### 5.1.3 GPU 메모리 분해하기
+
+GPU 메모리에는 다음과 같은 데이터가 저장된다.   
+- 모델 파라미터
+- 그레이디언트
+- 옵티마이저 상태
+- 순전파 상태
+
+딥러닝 학습 과정:
+1) 순전파 수행
+2) 그때 계산한 손실로부터 역전파 수행
+3) 옵티마이저를 통해 모델 업데이트
+이때 역전파를 수행하기 위해 저장하고 있는 값들이 순전파 상태 값이다. 그레이디언트는 역전과 결과 생성된다.
+
+배치 크기가 증가해도 모델, 그레이디언트, 옵티마이저 상태를 저장하는 데 필요한 GPU 메모리는 동일한다. 총 메모리가 증가하는 것을 통해 순전파 상태의 계산에 필요한 메모리가 증가한다. 
+
+## 5.2 단일 GPU 효율적으로 활용하기
+### 5.2.1 그레이디언트 누적 
+**그레이디언트 누적** - 메모리 제약을 해결하기 위해 제한된 메모리 안에서 배치 크기를 키우는 것과 동일한 효과를 얻는 방법
+
+### 5.2.2 그레이디언트 체크포인팅 
+**그레이디언트 체크포인팅** - 순전파의 계산 결과를 전 저장하지 않고 중간중간에 값들을 저장해 메모리 사용량을 줄이고 필요한 경우 체크포인트부터 다시 계산해 순전파 계산량을 줄이는 방식
+
+![그림 5.9 그레이디언트 체크포인팅 방식을 사용했을 때의 순전파와 역전파 결과 저장 ](./picture/photo_2024-09-11_23-02-48.jpg)   
+
+## 5.3 분산 학습과 ZeRo
+### 5.3.1 분산 학습 
+분산 학습 - GPU를 여러 개 활용해 딥러닝 모델을 학습
+**데이터 병렬화** - 여러 GPU에 각각 모델을 올리고 학습 데이터를 병렬로 처리해 학습 속도를 높이는 방식
+
+모델 병렬화 : 모델을 여러 개의 GPU에 나눠서 올리는 방식
+1)파이프라인 병렬화 - 모델의 층별로 나눈다
+2) 텐서 병렬화 -  한 층의 모델도 나눈다
+
+그림 5.11에서 모델을 그림 의 상하로 나누면(머신 1, 2와 머신 3, 4로 구분) 파이프라인 병렬화이고 좌우로 나누면(머 신 1.3과 머신 2, 4로 구분) 텐서 병렬화에 해당한다.
+
+![그림 5.11 하나의 모델을 나눠 여러 GPU에 올리는 모델 병렬화](./picture/photo_2024-09-11_23-02-47.jpg)   
+
+데이터 병렬화 장점: 모델을 각 GPU에 올리고 학습 데이터를 나눠 동시에 학습 해서 학습 속도를 높인다
+단점: 동일한 모델을 여러 GPU에 올려 중복으로 메모리를 차지하기 때문에 메모리 관 점에서는 비효율적이다
+
+### 5.3.2 데이터 병렬화에서 중복저장 줄이기(ZeRO)
+
+데이터 병렬화의 단점을 극복하기 위해  ZeRO 사용. 각 GPU가 모델을 부분적으로 가지고, 필요한 순간에만 모델 파라미터를 복사해 연산을 수행하는 방식으로 메모리를 효율적으로 사용한다.
+
+## 효율적인 학습 방법(PEFT) LoRA 
+### 5.4.1 모델 파라미터의 일부만 재구성해 학습하는 LoRA 
+
+PEFT(Parameter Efficient Fine-Tuning) : 일부 파라미터만 학습 
+**LoRA** - PEFT의 일종으로 모델 파라미터를 재구성해 더 적은 파라미터를 학습함으로써 GPU 메모리 사용량을 줄인다.
+
+LoRA를 통해 GPU 메모리 사용량이 줄어드는 부분은 바로 그레이디언트와 올티마 이저 상태를 저장하는 데 필요한 메모리가 줄어들기 때문이다.
+
+![그릴 5.16 파라미터 재구성을 통해 더 적은 파라미터 학습](./picture/photo_2024-09-11_23-02-46.jpg)  
+
+![ 그림 5.17 전체 미세 조정과 LORA에서 저장하는 데이터 비교](./picture/photo_2024-09-11_23-02-45.jpg)  
+
+## 5.5 효율적인 학습 방법(PEFT): QLoRA
+### 5.5.1 4비트 양자화와 2차 양자화 
+
+QLoRA - LoRA에 양자화를 추가해 메모리 효율성을 한 번 더 높인 학습 방법
+
+QLORA는 대형 언어 모델을 최 대한 효율적으로 다룰 수 있도록 여러 기법을 적용했기 때문에 메모리 효율화를 이해하 기 위한 좋은 참고 자료이기도 하다. 
+
+기존 데이터의 분포를 알고 있다면 많은 연산이나 메모리 사용 없이도 빠르게 데이터의 순위를 정할 수 있다. 
+
+### 5.5.2 페이지 옵티마이저
+그레이디언트 체크포인팅 과정에서 발생할 수 있는 OOM에러를 방지하기 위해 페이지 옵티마이저를 활용
+
+**페이지 옵티마이저** - 엔비디아의 통합 메모리를 통해 GPU가 CPU 메모리(RAM)를 공유하는 것
+
+# 06 sLLM 학습하기 
+## 6.1 Text2SQL 데이터셋 
+### 6.1.1 대표적인 Text2SQL 데이터셋
+
+대표적인 Text2SQL 데이터셋 : WikiSQL, Spider 
+
+SQL을 생성하기 위해서는 크게 두 가지 데이터가 필요:
+1) 어떤 데이터가 있는지 알 수 있는 데이터베이스 정보(테이블과 컬럼)
+2) 어떤 데이터를 추출하고 싶은지 나타낸 요청사항(request, question)
+
+### 6.1.3 합성 데이터 활용
+
+생성한 데이터셋은 db_ld, context, question, answer 4개의 컬럼으로 구성돼 있다.
+- db_id : 테이블이 포함된 데이터베이스 아이디
+- context : SQL 생성에 사용할 테이블정보
+- question : 데이터 요청사항
+- answer : 요청에 대한 SQL 정답 
+
+## 6.2 성능 평가 파이프라인 준비하기 
+### 6.2.1 Text2SQL 평가 방식 
+
+
+일방적으로 사용하는 성능평가 방법:
+- EM(Exact Match) 방식 : 생성한 SQL이 문자열 그대로 동일한지 확인하는 방식
+- EX(Execution Accuracy) 방식 : 쿼리를 수행할 수 있는 데이터베이스를 만들고 프로그래밍 방식으로 SQL 쿼리를 수행해 정답과 일치하는지 확인하는 방식
+
+최근에는 LLM을 활요해 LLM의 생성 결과를 평가하는 방식이 활발히 연구되고 있다
+
+![그림 6.5 LLM을 활용한 Text2SQL 평가 방식](./picture/photo_2024-09-11_23-02-44.jpg)
+
+### SQL 생성 프롬프트
+
+>SQL 프롬프트 데이터 예시
+
+```
+#학습 데이터 예시
+
+***당신은 SQL을 생성하는 SQL 봇입니다. DDL의 테이블을 활용한 Question SQL 허리를 생성하세요.
+
+DOL:
+
+CREATE TABLE messages (
+
+);
+
+"message id" SERIAL PRIMARY KEY,
+
+*conversation_id" INT NOT NULL,
+
+"sender_ld" INT NOT NULL,
+
+"content" TEXT,
+
+"timestamp" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT TIMESTAMP, "read" BOOLEAN DEFAULT FALSE,
+
+FOREIGN KEY ("conversation_id") REFERENCES conversations("conversation_id"), FOREIGN KEY ("sender_id") REFERENCES users("user_id")
+
+### Question:
+
+messages 테이블에서 모든 데이터를 조회해 줘
+
+###SQL:
+
+SELECT FROM messages;"*"
+
+#생성 프롬프트 예시
+
+**"당신은 SQL을 생성하는 SQL 봇입니다. DDL의 테이블을 활용한 Question을 해결할 수 있는 SQL 쿼리를 생성하세요.
+### DDL:
+
+CREATE TABLE messages (
+
+"message id" SERIAL PRIMARY KEY, "conversation td" INT NOT NULL,
+
+"sender (d" INT NOT NULL,
+
+"content" TEXT,
+
+"timestamp" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT TIMESTAMP,
+
+"read" BOOLEAN DEFAULT FALSE, FOREIGN KEY ("conversation td") REFERENCES conversations("conversation_td"), FOREIGN KEY ("sender (d") REFERENCES users("user_(d")
+
+###Question:
+
+messages 테이블에서 모든 데이터를 조회해 줘
+
+###SQL:
+"""
+```
+### GPT-4 평가 프롬프트와 코드 준비
+GPT-4 API를 통해 평가 데이터셋으로를 수행하면 시간이 오래 걸려 OpenAI의 비동기 요청 코드(api_request_parallel_processor.py)를 활용해 요청 제한을 관리하며 처리 속도를 높일 수 있다. 이 코드는 jsonl 파일을 읽어 순차적으로 요청을 보내고, 에러나 제한에 걸리면 다시 요청을 보내 결과 누락을 방지한다.
+
+> 예제 6.4. 평가를 위한 요청 jsonl 작성 함수
+
+
+```
+import json
+import pandas as pd
+from pathlib import Path
+
+def make_requests_for_gpt_evaluation(df, filename, dir='requests'):
+  if not Path(dir).exists():
+      Path(dir).mkdir(parents=True)
+  prompts = []
+  for idx, row in df.iterrows():
+      prompts.append("""Based on below DDL and Question, evaluate gen_sql can resolve Question. If gen_sql and gt_sql do equal job, return "yes" else return "no". Output JSON Format: {"resolve_yn": ""}""" + f"""
+
+DDL: {row['context']}
+Question: {row['question']}
+gt_sql: {row['answer']}
+gen_sql: {row['gen_sql']}"""
+)
+
+  jobs = [{"model": "gpt-4-turbo-preview", "response_format" : { "type": "json_object" }, "messages": [{"role": "system", "content": prompt}]} for prompt in prompts]
+  with open(Path(dir, filename), "w") as f:
+      for job in jobs:
+          json_string = json.dumps(job)
+          f.write(json_string + "\n")
+```
+
+
+## 6.3 실습: 미세조정 수행하기 
+### 6.3.1 기초 모델 평가하기
+
+> 예제 6.7. 기초 모델로 생성하기
+
+
+```
+import torch
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+
+def make_inference_pipeline(model_id):
+  tokenizer = AutoTokenizer.from_pretrained(model_id)
+  model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto", load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16)
+  pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
+  return pipe
+
+model_id = 'beomi/Yi-Ko-6B'
+hf_pipe = make_inference_pipeline(model_id)
+
+example = """당신은 SQL을 생성하는 SQL 봇입니다. DDL의 테이블을 활용한 Question을 해결할 수 있는 SQL 쿼리를 생성하세요.
+
+### DDL:
+CREATE TABLE players (
+  player_id INT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(255) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  date_joined DATETIME NOT NULL,
+  last_login DATETIME
+);
+
+### Question:
+사용자 이름에 'admin'이 포함되어 있는 계정의 수를 알려주세요.
+
+### SQL:
+"""
+
+hf_pipe(example, do_sample=False,
+    return_full_text=False, max_length=512, truncation=True)
+#  SELECT COUNT(*) FROM players WHERE username LIKE '%admin%';
+
+# ### SQL 봇:
+# SELECT COUNT(*) FROM players WHERE username LIKE '%admin%';
+
+# ### SQL 봇의 결과:
+# SELECT COUNT(*) FROM players WHERE username LIKE '%admin%'; (생략)
+```
+
+### 6.3.2 미세 조정 수행
+> 예제 6.10. 미세 조정 명령어
+
+```
+base_model = 'beomi/Yi-Ko-6B'
+finetuned_model = 'yi-ko-6b-text2sql'
+
+!autotrain llm \
+--train \
+--model {base_model} \
+--project-name {finetuned_model} \
+--data-path data/ \
+--text-column text \
+--lr 2e-4 \
+--batch-size 8 \
+--epochs 1 \
+--block-size 1024 \
+--warmup-ratio 0.1 \
+--lora-r 16 \
+--lora-alpha 32 \
+--lora-dropout 0.05 \
+--weight-decay 0.01 \
+--gradient-accumulation 8 \
+--mixed-precision fp16 \
+--use-peft \
+--quantization int4 \
+--trainer sft
+```
+### 6.3.3 학습 데이터 정제와 미세정제
+
+학습을 통해 사용하는 데이터셋이 커지면서 성능이 함께 향상되는 것을 확인할 수 있다. 이 결과를 통해 학습 데이터 정제 과정에서 데이터셋이 줄었음에도 성능이 유지 되는 것이 정제의 긍정적인 효과임을 짐작해 볼 수 있다.
