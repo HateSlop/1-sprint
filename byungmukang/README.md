@@ -473,5 +473,121 @@ def train_model(model, dataset, training_args):
   - 페이지 옵티마이저: 통합 메모리를 통해 GPU가 CPU 메모리를 공유하는 것
 # 6. sLLM 학습하기
 ## Text2SQL 데이터셋
+  - Text2SQL: 사용자가 얻고 싶은 데이터에 대한 요청을 자연어로 작성하면 LLM이 요청에 맞는 SQL을 생성하는 작업
+  - 한국어 Text2SQL 데이터셋은 https://huggingface.co/datasets/shangrilar/ko_text2sql 사용
 ## 성능 평가 파이프라인 준비하기
+  - Text2SQL 평가 방식
+    - EM(Exact Match) 방식: 생성한 SQL이 문자열 그래도 동일한지 확인하는 방식. 의미상으로 동일한 SQL 쿼리가 다양하게 나올 수 있는데 오답 처리할 수 있다는 단점
+    - 실행 정확도 방식: 데이터베이스를 만들고 프로그래밍 방식으로 SQL 쿼리를 수행해 정답과 일치하는지 확인하는 방식. 쿼리를 실행할 수 있는 데이터베이스를 추가로 준비해야 하는 단점
+    - LLM을 활용해 LLM의 생성 결과를 평가하는 방식 이용
+  - SQL 생성 프롬프트
+```python
+def make_prompt(ddl, question, query=''):
+    prompt = f"""당신은 SQL을 생성하는 SQL 봇입니다. DDL의 테이블을 활용한 Question을 해결할 수 있는 SQL 쿼리를 생성하세요.
+
+### DDL:
+{ddl}
+
+### Question:
+{question}
+
+### SQL:
+{query}"""
+    return prompt
+```
+  - GPT-4를 통해 평가
+    + 평가 데이터셋에서 요청 jsonl파일을 생성
+```python
+import json
+import pandas as pd
+from pathlib import Path
+
+def make_requests_for_gpt_evaluation(df, filename, dir='requests'):
+  if not Path(dir).exists():
+      Path(dir).mkdir(parents=True)
+  prompts = []
+  for idx, row in df.iterrows():
+      prompts.append("""Based on below DDL and Question, evaluate gen_sql can resolve Question. If gen_sql and gt_sql do equal job, return "yes" else return "no". Output JSON Format: {"resolve_yn": ""}""" + f"""
+
+DDL: {row['context']}
+Question: {row['question']}
+gt_sql: {row['answer']}
+gen_sql: {row['gen_sql']}"""
+)
+
+  jobs = [{"model": "gpt-4-turbo-preview", "response_format" : { "type": "json_object" }, "messages": [{"role": "system", "content": prompt}]} for prompt in prompts]
+  with open(Path(dir, filename), "w") as f:
+      for job in jobs:
+          json_string = json.dumps(job)
+          f.write(json_string + "\n")
+```
 ## 실습: 미세 조정 수행하기
+  - 사용 모델: https://huggingface.co/shangrilar/yi-ko-6b-text2sql
+  - 기초 모델 생성:
+ ```python
+import torch
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+
+def make_inference_pipeline(model_id):
+  tokenizer = AutoTokenizer.from_pretrained(model_id)
+  model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto", load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16)
+  pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
+  return pipe
+
+model_id = 'beomi/Yi-Ko-6B'
+hf_pipe = make_inference_pipeline(model_id)
+
+example = """당신은 SQL을 생성하는 SQL 봇입니다. DDL의 테이블을 활용한 Question을 해결할 수 있는 SQL 쿼리를 생성하세요.
+
+### DDL:
+CREATE TABLE players (
+  player_id INT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(255) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  date_joined DATETIME NOT NULL,
+  last_login DATETIME
+);
+
+### Question:
+사용자 이름에 'admin'이 포함되어 있는 계정의 수를 알려주세요.
+
+### SQL:
+"""
+
+hf_pipe(example, do_sample=False,
+    return_full_text=False, max_length=512, truncation=True)
+#  SELECT COUNT(*) FROM players WHERE username LIKE '%admin%';
+
+# ### SQL 봇:
+# SELECT COUNT(*) FROM players WHERE username LIKE '%admin%';
+
+# ### SQL 봇의 결과:
+# SELECT COUNT(*) FROM players WHERE username LIKE '%admin%'; (생략)
+```
+  - 기초 모델 평가
+ ```python
+base_model = 'beomi/Yi-Ko-6B'
+finetuned_model = 'yi-ko-6b-text2sql'
+
+!autotrain llm \
+--train \
+--model {base_model} \
+--project-name {finetuned_model} \
+--data-path data/ \
+--text-column text \
+--lr 2e-4 \
+--batch-size 8 \
+--epochs 1 \
+--block-size 1024 \
+--warmup-ratio 0.1 \
+--lora-r 16 \
+--lora-alpha 32 \
+--lora-dropout 0.05 \
+--weight-decay 0.01 \
+--gradient-accumulation 8 \
+--mixed-precision fp16 \
+--use-peft \
+--quantization int4 \
+--trainer sft
+```
