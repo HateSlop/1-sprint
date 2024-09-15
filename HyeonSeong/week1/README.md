@@ -315,4 +315,4 @@ TF-IDF(Term Frequency-Inverse Document Frequency) - 앞의 문제를 보완하�
 
 ## 10.2 문장 임베딩 방식
 ### 10.2.1 문장 사이의 관계를 계산하는 두 가지 방법
-바이 인코더        
+바이 인코더            
