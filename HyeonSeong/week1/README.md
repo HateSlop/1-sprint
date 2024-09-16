@@ -197,11 +197,32 @@ GPU에서 연산은 커널 단위로 이루어지는데 커널마다 고대역�
 - 오프라인 추론: 대량의 입력 데이터에 대해 추론을 수행해 충분히 큰 배치 크기를 활용할 수 있는 추론
 - 온라인 추론: 사용자의 요청에 따라 모델 추론을 수행하는 방식   
 ### 8.4.1 오프라인 서빙
-예제 8.5
+```
+import time
+
+for max_num_seqs in [1, 2, 4, 8, 16, 32]:
+  start_time = time.time()
+  llm.llm_engine.scheduler_config.max_num_seqs = max_num_seqs
+  sampling_params = SamplingParams(temperature=1, top_p=1, max_tokens=128)
+  outputs = llm.generate(dataset['prompt'].tolist(), sampling_params)
+  print(f'{max_num_seqs}: {time.time() - start_time}')
+```
 
 표 8.3
 ### 8.4.2 온라인 서빙
-예제 8.10
+```
+from openai import OpenAI
+
+openai_api_key = "EMPTY"
+openai_api_base = "http://localhost:8888/v1"
+client = OpenAI(
+    api_key=openai_api_key,
+    base_url=openai_api_base,
+)
+completion = client.completions.create(model="shangrilar/yi-ko-6b-text2sql",
+                                 prompt=dataset.loc[0, 'prompt'], max_tokens=128)
+print("생성 결과:", completion.choices[0].text)
+```
 
 # 9 LLM 애플리케이션 개발하기
 ## 9.1 검색 증강 생성(RAG)
@@ -226,13 +247,45 @@ LLM은 결과를 생성할 때 프롬프트만 입력으로 받기 때문에 사
 
 ### 9.1.3 실습: 라마인덱스로 RAG 구현하기
 대표적인 LLM 오케스트레이션 라이브러리인 **라마인덱스**를 사용해 진행   
-
-예제 9.4
-
+```
+query_engine = index.as_query_engine(similarity_top_k=1)
+response = query_engine.query(
+    dataset[0]['question']
+)
+print(response)
+# 장마전선에서 북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은 한 달 정도입니다.
+```
 다양한 구성요소와 과정이 필요하지만, 라마인덱스를 사용하면 단 두 줄의 코드만으로 유사한 텍스트를 검색하고 생성하는 과정을 전부 수행 가능   
+```
+from llama_index.core import (
+    VectorStoreIndex,
+    get_response_synthesizer,
+)
+from llama_index.core.retrievers import VectorIndexRetriever
+from llama_index.core.query_engine import RetrieverQueryEngine
+from llama_index.core.postprocessor import SimilarityPostprocessor
 
-예제 9.5
+# 검색을 위한 Retriever 생성
+retriever = VectorIndexRetriever(
+    index=index,
+    similarity_top_k=1,
+)
 
+# 검색 결과를 질문과 결합하는 synthesizer
+response_synthesizer = get_response_synthesizer()
+
+# 위의 두 요소를 결합해 쿼리 엔진 생성
+query_engine = RetrieverQueryEngine(
+    retriever=retriever,
+    response_synthesizer=response_synthesizer,
+    node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.7)],
+)
+
+# RAG 수행
+response = query_engine.query("북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은?")
+print(response)
+# 장마전선에서 북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은 한 달 가량입니다.
+```
 ## 9.2 LLM 캐시
 LLM 캐시는 추론을 수행할 때 사용자의 요청과 생성 결과를 기록하고 이후에 동일하거나 비슷한 요청이 들어오면 새롭게 텍스트를 생성하지 않고 이전의 생성 결과를 가져와 바로 응답   
 
@@ -245,9 +298,44 @@ LLM 캐시는 프롬프트 통합과 LLM 생성 사이에 위치하여 캐시 �
 
 ### 9.2.2 실습: OpenAI API 캐시 구현
 파이썬 딕셔너리와 오픈소스 벡터 데이터베이스 크로마(Chroma)를 사용해 기능 구현   
+```
+class OpenAICache:
+    def __init__(self, openai_client):
+        self.openai_client = openai_client
+        self.cache = {}
 
-예제 9.8
+    def generate(self, prompt):
+        if prompt not in self.cache:
+            response = self.openai_client.chat.completions.create(
+                model='gpt-3.5-turbo',
+                messages=[
+                    {
+                        'role': 'user',
+                        'content': prompt
+                    }
+                ],
+            )
+            self.cache[prompt] = response_text(response)
+        return self.cache[prompt]
 
+openai_cache = OpenAICache(openai_client)
+
+question = "북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은?"
+for _ in range(2):
+    start_time = time.time()
+    response = openai_cache.generate(question)
+    print(f'질문: {question}')
+    print("소요 시간: {:.2f}s".format(time.time() - start_time))
+    print(f'답변: {response}\n')
+
+# 질문: 북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은?
+# 소요 시간: 2.74s
+# 답변: 북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은 겨울 시즌인 11월부터 다음해 4월까지입니다. 이 기간 동안 기단의 영향으로 한반도에는 추운 날씨와 함께 강한 바람이 불게 되며, 대체로 한반도의 겨울철 기온은 매우 낮아집니다.
+
+# 질문: 북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은?
+# 소요 시간: 0.00s
+# 답변: 북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은 겨울 시즌인 11월부터 다음해 4월까지입니다. 이 기간 동안 기단의 영향으로 한반도에는 추운 날씨와 함께 강한 바람이 불게 되며, 대체로 한반도의 겨울철 기온은 매우 낮아집니다.
+```
 입력받은 prompt가 self.cache에 없다면 새롭게 저장하고 동일한 프롬프트가 있다면 저장된 응답을 반환   
 
 ## 9.3 데이터 검증
@@ -262,22 +350,95 @@ LLM 캐시는 프롬프트 통합과 LLM 생성 사이에 위치하여 캐시 �
 
 ### 9.3.2 데이터 검증 실습
 엔비디아에서 개발한 NeMo-Guardrails 라이브러리를 활용해 특정 주제에 대한 답변을 피하는 기능 구현   
+```
+colang_content_cooking = """
+define user ask about cooking
+    "How can I cook pasta?"
+    "How much do I have to boil pasta?"
+    "파스타 만드는 법을 알려줘."
+    "요리하는 방법을 알려줘."
 
-예제 9.13
+define bot refuse to respond about cooking
+    "죄송합니다. 저는 요리에 대한 정보는 답변할 수 없습니다. 다른 질문을 해주세요."
 
+define flow cooking
+    user ask about cooking
+    bot refuse to respond about cooking
+"""
+# initialize rails config
+config = RailsConfig.from_content(
+    colang_content=colang_content_cooking,
+    yaml_content=yaml_content
+)
+# create rails
+rails_cooking = LLMRails(config)
+
+rails_cooking.generate(messages=[{"role": "user", "content": "사과 파이는 어떻게 만들어?"}])
+# {'role': 'assistant',
+#  'content': '죄송합니다. 저는 요리에 대한 정보는 답변할 수 없습니다. 다른 질문을 해주세요.'}
+```
 ## 9.4 데이터 로깅
 **데이터 로깅** - 사용자의 입력과 LLM이 생성한 출력을 기록   
 LLM의 경우 입력이 동일해도 출력이 달라질 수 있기 때문에 어떤 입력에서 어떤 출력을 반환했는지 반드시 기록해야 함   
 대표적인 로깅 도구 중 하나인 W&B(Weight adn Bias)에서 제공하는 Trace 기능을 활용하면 요청과 응답을 기록할 수 있음   
 
 ### 9.4.1 OpenAI API 로깅
+```
+import datetime
+from openai import OpenAI
+from wandb.sdk.data_types.trace_tree import Trace
 
-예제 9.16
+client = OpenAI()
+system_message = "You are a helpful assistant."
+query = "대한민국의 수도는 어디야?"
+temperature = 0.2
+model_name = "gpt-3.5-turbo"
 
+response = client.chat.completions.create(model=model_name,
+                                        messages=[{"role": "system", "content": system_message},{"role": "user", "content": query}],
+                                        temperature=temperature
+                                        )
+
+root_span = Trace(
+      name="root_span",
+      kind="llm",
+      status_code="success",
+      status_message=None,
+      metadata={"temperature": temperature,
+                "token_usage": dict(response.usage),
+                "model_name": model_name},
+      inputs={"system_prompt": system_message, "query": query},
+      outputs={"response": response.choices[0].message.content},
+      )
+
+root_span.log(name="openai_trace")
+```
 ### 9.4.2 라마인덱스 로깅
+```
+from datasets import load_dataset
+import llama_index
+from llama_index.core import Document, VectorStoreIndex, ServiceContext
+from llama_index.llms.openai import OpenAI
+from llama_index.core import set_global_handler
+# 로깅을 위한 설정 추가
+llm = OpenAI(model="gpt-3.5-turbo", temperature=0)
+set_global_handler("wandb", run_args={"project": "llamaindex"})
+wandb_callback = llama_index.core.global_handler
+service_context = ServiceContext.from_defaults(llm=llm)
 
-예제 9.17
+dataset = load_dataset('klue', 'mrc', split='train')
+text_list = dataset[:100]['context']
+documents = [Document(text=t) for t in text_list]
 
+index = VectorStoreIndex.from_documents(documents, service_context=service_context)
+
+print(dataset[0]['question']) # 북태평양 기단과 오호츠크해 기단이 만나 국내에 머무르는 기간은?
+
+query_engine = index.as_query_engine(similarity_top_k=1, verbose=True)
+response = query_engine.query(
+    dataset[0]['question']
+)
+```
 # 10 임베딩 모델로 데이터 의미 압축하기
 ## 10.1 텍스트 임베딩 이해하기
 **텍스트 임베딩 / 문장 임베딩** - 여러 문장의 텍스트를 임베딩 벡터로 변환하는 방식   
@@ -344,11 +505,23 @@ BERT(Bidirectional Encoder Representations from Transformers) - 트랜스포머 
 세 가지 풀링 모드 중에서는 평균 모드를 일반적으로 많이 활용   
 
 ### 10.2.3 Sentence-Transformers로 텍스트와 이미지 임베딩 생성해 보기
+```
+from sentence_transformers import SentenceTransformer, util
 
-예제 10.6
+model = SentenceTransformer('snunlp/KR-SBERT-V40K-klueNLI-augSTS')
+
+embs = model.encode(['잠이 안 옵니다',
+                     '졸음이 옵니다',
+                     '기차가 옵니다'])
+
+cos_scores = util.cos_sim(embs, embs)
+print(cos_scores)
+# tensor([[1.0000, 0.6410, 0.1887],
+#         [0.6410, 1.0000, 0.2730],
+#         [0.1887, 0.2730, 1.0000]])
 
 허깅페이스 모델 허브에서 제공하는 이미지 모델을 활용하면 이미지도 이미지 임베딩으로 쉽게 변환할 수 있음   
-
+```
 ### 10.2.4 오픈소스와 상업용 임베딩 모델 비교하기
 상업용 모델은 대량의 데이터로 학습된 만큼 성능이 뛰어나고 LLM 텍스트 생성에 비해 훨씬 낮은 비용으로 사용이 가능   
 그러나 사용자가 자신의 데이터에 특화된 임베딩 모델을 만을 수 없음   
@@ -359,13 +532,38 @@ BERT(Bidirectional Encoder Representations from Transformers) - 트랜스포머 
 ### 10.3.1 의미 검색 구현하기   
 의미 검색은 키워드 검색과 달리 동일한 키워드가 사용되지 않아도 의미적 유사성이 있다면 가깝게 평가함   
 그러나 관련성이 떨어지는 검색 결과가 나오기도 함   
+```
+query = klue_mrc_dataset[3]['question'] # 로버트 헨리 딕이 1946년에 매사추세츠 연구소에서 개발한 것은 무엇인가?
+query_embedding = sentence_model.encode([query])
+distances, indices = index.search(query_embedding, 3)
 
-예제 10.12
+for idx in indices[0]:
+  print(klue_mrc_dataset['context'][idx][:50])
 
+# 출력 결과
+# 태평양 전쟁 중 뉴기니 방면에서 진공 작전을 실시해 온 더글러스 맥아더 장군을 사령관으로 (오답)
+# 태평양 전쟁 중 뉴기니 방면에서 진공 작전을 실시해 온 더글러스 맥아더 장군을 사령관으로 (오답)
+# 미국 세인트루이스에서 태어났고, 프린스턴 대학교에서 학사 학위를 마치고 1939년에 로체스 (정답)
+```
 ### 10.3.2 라마인덱스에서 Sentence-Transformers 모델 사용하기
+```
+from llama_index.core import VectorStoreIndex, ServiceContext
+from llama_index.core import Document
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
-예제 10.13
+embed_model = HuggingFaceEmbedding(model_name="snunlp/KR-SBERT-V40K-klueNLI-augSTS")
+service_context = ServiceContext.from_defaults(embed_model=embed_model, llm=None)
+# 로컬 모델 활용하기
+# service_context = ServiceContext.from_defaults(embed_model="local")
 
+text_list = klue_mrc_dataset[:100]['context']
+documents = [Document(text=t) for t in text_list]
+
+index_llama = VectorStoreIndex.from_documents(
+    documents,
+    service_context=service_context,
+)
+```
 ## 10.4 검색 방식을 조합해 성능 높이기
 ### 10.4.1 키워드 검색 방식: BM25
 **BM25** - TF-IDF와 유사한 통계 기반 스코어링 방법으로, 문서 길이에 대한 가중치를 추가한 알고리즘   
@@ -393,16 +591,84 @@ BERT(Bidirectional Encoder Representations from Transformers) - 트랜스포머 
 
 ## 10.5 실습: 하이브리드 검색 구현하기
 ### 10.5.1 BM25 구현하기
-예제 10.14
+```
+import math
+import numpy as np
+from typing import List
+from transformers import PreTrainedTokenizer
+from collections import defaultdict
 
+class BM25:
+  def __init__(self, corpus:List[List[str]], tokenizer:PreTrainedTokenizer):
+    self.tokenizer = tokenizer
+    self.corpus = corpus
+    self.tokenized_corpus = self.tokenizer(corpus, add_special_tokens=False)['input_ids']
+    self.n_docs = len(self.tokenized_corpus)
+    self.avg_doc_lens = sum(len(lst) for lst in self.tokenized_corpus) / len(self.tokenized_corpus)
+    self.idf = self._calculate_idf()
+    self.term_freqs = self._calculate_term_freqs()
+
+  def _calculate_idf(self):
+    idf = defaultdict(float)
+    for doc in self.tokenized_corpus:
+      for token_id in set(doc):
+        idf[token_id] += 1
+    for token_id, doc_frequency in idf.items():
+      idf[token_id] = math.log(((self.n_docs - doc_frequency + 0.5) / (doc_frequency + 0.5)) + 1)
+    return idf
+
+  def _calculate_term_freqs(self):
+    term_freqs = [defaultdict(int) for _ in range(self.n_docs)]
+    for i, doc in enumerate(self.tokenized_corpus):
+      for token_id in doc:
+        term_freqs[i][token_id] += 1
+    return term_freqs
+
+  def get_scores(self, query:str, k1:float = 1.2, b:float=0.75):
+    query = self.tokenizer([query], add_special_tokens=False)['input_ids'][0]
+    scores = np.zeros(self.n_docs)
+    for q in query:
+      idf = self.idf[q]
+      for i, term_freq in enumerate(self.term_freqs):
+        q_frequency = term_freq[q]
+        doc_len = len(self.tokenized_corpus[i])
+        score_q = idf * (q_frequency * (k1 + 1)) / ((q_frequency) + k1 * (1 - b + b * (doc_len / self.avg_doc_lens)))
+        scores[i] += score_q
+    return scores
+
+  def get_top_k(self, query:str, k:int):
+    scores = self.get_scores(query)
+    top_k_indices = np.argsort(scores)[-k:][::-1]
+    top_k_scores = scores[top_k_indices]
+    return top_k_scores, top_k_indices
+```
 검색 쿼리 문장과 정답 기사 사이의 일치하는 키워드가 적으면 검색되지 않을 수도 있지만 일치하는 키워드를 바탕으로 관련된 기사는 잘 찾음   
 
 ### 10.5.2 상호 순위 조합 구현하기
-예제 10.18
+```
+from collections import defaultdict
 
+def reciprocal_rank_fusion(rankings:List[List[int]], k=5):
+    rrf = defaultdict(float)
+    for ranking in rankings:
+        for i, doc_id in enumerate(ranking, 1):
+            rrf[doc_id] += 1.0 / (k + i)
+    return sorted(rrf.items(), key=lambda x: x[1], reverse=True)
+```
 ### 10.5.3 하이브리드 검색 구현하기
-예제 10.20
+```
+def dense_vector_search(query:str, k:int):
+  query_embedding = sentence_model.encode([query])
+  distances, indices = index.search(query_embedding, k)
+  return distances[0], indices[0]
 
+def hybrid_search(query, k=20):
+  _, dense_search_ranking = dense_vector_search(query, 100)
+  _, bm25_search_ranking = bm25.get_top_k(query, 100)
+
+  results = reciprocal_rank_fusion([dense_search_ranking, bm25_search_ranking], k=k)
+  return results
+```
 하이브리드 검색을 사용하면 의미 검색과 키워드 검색의 단점을 서로 상호보완할 수 있음   
 
 # 11 자신의 데이터에 맞춘 임베딩 모델 만들기: RAG 개선하기
@@ -424,42 +690,137 @@ BERT(Bidirectional Encoder Representations from Transformers) - 트랜스포머 
 1. 학습 데이터의 일부를 검증을 위한 데이터셋으로 분리
 2. 유사도 점수를 0~1 사이로 정규화
 3. torch.utils.data.DataLoader를 사용해 배치 데이터로 만듦   
+```
+from sentence_transformers import InputExample
+# 유사도 점수를 0~1 사이로 정규화 하고 InputExample 객체에 담는다.
+def prepare_sts_examples(dataset):
+    examples = []
+    for data in dataset:
+        examples.append(
+            InputExample(
+                texts=[data['sentence1'], data['sentence2']],
+                label=data['labels']['label'] / 5.0)
+            )
+    return examples
 
-예제 11.4   
-
+train_examples = prepare_sts_examples(klue_sts_train)
+eval_examples = prepare_sts_examples(klue_sts_eval)
+test_examples = prepare_sts_examples(klue_sts_test) 
+```
 ### 11.2.3 실습: 유사한 문장 데이터로 임베딩 모델 학습하기
-예제 11.8   
+```
+from sentence_transformers import losses
+
+num_epochs = 4
+model_name = 'klue/roberta-base'
+model_save_path = 'output/training_sts_' + model_name.replace("/", "-")
+train_loss = losses.CosineSimilarityLoss(model=embedding_model)
+
+# 임베딩 모델 학습
+embedding_model.fit(
+    train_objectives=[(train_dataloader, train_loss)],
+    evaluator=eval_evaluator,
+    epochs=num_epochs,
+    evaluation_steps=1000,
+    warmup_steps=100,
+    output_path=model_save_path
+)  
+```
 출력 결과를 확인하면 학습 전에 0.364였던 점수가 0.896으로 크게 향상
 
 ## 11.3 임베딩 모델 미세 조정하기
 ### 11.3.1 실습: 학습 준비
 기존의 데이터는 많은 필드로 구성되어 있기 때문에 학습을 하는데 필요한 title, question, context를 제외한 나머지 컬럼들을 제거   
-예제 11.13   
-서로 question과 context 칼럼이 서로 관련 있는 경우 label을 1로 지정하고 없는 경우에는 label을 0으로 지정   
-예제 11.15   
+```
+from datasets import load_dataset
+klue_mrc_train = load_dataset('klue', 'mrc', split='train')
+klue_mrc_test = load_dataset('klue', 'mrc', split='validation')
 
+df_train = klue_mrc_train.to_pandas()
+df_test = klue_mrc_test.to_pandas()
+
+df_train = df_train[['title', 'question', 'context']]
+df_test = df_test[['title', 'question', 'context']]  
+```
+서로 question과 context 칼럼이 서로 관련 있는 경우 label을 1로 지정하고 없는 경우에는 label을 0으로 지정  
+``` 
+from sentence_transformers import InputExample
+
+examples = []
+for idx, row in df_test_ir[:100].iterrows():
+  examples.append(
+      InputExample(texts=[row['question'], row['context']], label=1)
+  )
+  examples.append(
+      InputExample(texts=[row['question'], row['irrelevant_context']], label=0)
+  )  
+```
 ### 11.3.2 MNR 손실을 활용해 미세 조정하기
 **MNR(Multiple Negatives Ranking) 손실** - 하나의 배치 데이터 안에서 positive 데이터만 존재하는 경우 다른 데이터의 기사 본문을 서로 관련이 없는 negative 데이터로 사용하여 학습   
-예제 11.20   
+```
+epochs = 1
+save_path = './klue_mrc_mnr'
 
+sentence_model.fit(
+    train_objectives=[(loader, loss)],
+    epochs=epochs,
+    warmup_steps=100,
+    output_path=save_path,
+    show_progress_bar=True
+)  
+```
 ## 11.4 검색 품질을 높이는 순위 재정렬
-교차 인코더는 관련이 있는 질문-내용 쌍과 관련이 없는 질문-내용 쌍을 구분해야 하기 때문에 학습 데이터셋에 모두 포함돼야 함   
-예제 11.26   
+교차 인코더는 관련이 있는 질문-내용 쌍과 관련이 없는 질문-내용 쌍을 구분해야 하기 때문에 학습 데이터셋에 모두 포함돼야 함  
+``` 
+train_batch_size = 16
+num_epochs = 1
+model_save_path = 'output/training_mrc'
 
+train_dataloader = DataLoader(train_samples, shuffle=True, batch_size=train_batch_size)
+
+cross_model.fit(
+    train_dataloader=train_dataloader,
+    epochs=num_epochs,
+    warmup_steps=100,
+    output_path=model_save_path
+)
+```
 ## 11.5 바이 인코더와 교차 인코더로 개선된 RAG 구현하기
 아래와 같은 세 가지 케이스로 나눠 비교   
 1. 기본 임베딩 모델로 검색하기   
 2. 미세 조정한 임베딩 모델로 검색하기   
 3. 미세 조정한 모델과 교차 인코더를 결합해 검색하기   
+```
+def make_question_context_pairs(question_idx, indices):
+  return [[klue_mrc_test['question'][question_idx], klue_mrc_test['context'][idx]] for idx in indices]
 
-예제 11.31   
-
+def rerank_top_k(cross_model, question_idx, indices, k):
+  input_examples = make_question_context_pairs(question_idx, indices)
+  relevance_scores = cross_model.predict(input_examples)
+  reranked_indices = indices[np.argsort(relevance_scores)[::-1]]
+  return reranked_indices
+```
 ### 11.5.1 기본 임베딩 모델로 검색하기
-예제 11.33
+```
+from sentence_transformers import SentenceTransformer
+base_embedding_model = SentenceTransformer('shangrilar/klue-roberta-base-klue-sts')
+base_index = make_embedding_index(base_embedding_model, klue_mrc_test['context'])
+evaluate_hit_rate(klue_mrc_test, base_embedding_model, base_index, 10)
+# (0.88, 13.216430425643921)
+```
 ### 11.5.2 미세 조정한 임베딩 모델로 검색하기
-예제 11.34
+```
+finetuned_embedding_model = SentenceTransformer('shangrilar/klue-roberta-base-klue-sts-mrc')
+finetuned_index = make_embedding_index(finetuned_embedding_model, klue_mrc_test['context'])
+evaluate_hit_rate(klue_mrc_test, finetuned_embedding_model, finetuned_index, 10)
+# (0.946, 14.309881687164307)
+```
 ### 11.5.3 미세 조정한 임베딩 모델과 교차 인코더 조합하기
 교차 인코더의 경우 속도가 느리기 때문에 전체 문서를 대상으로 검색하지 않고 상위 N개만을 대상으로 계산   
-예제 11.36
+```
+hit_rate, cosumed_time, predictions = evaluate_hit_rate_with_rerank(klue_mrc_test, finetuned_embedding_model, cross_model, finetuned_index, bi_k=30, cross_k=10)
+hit_rate, cosumed_time
+# (0.973, 1103.055629491806)
+```
 표 11.1   
 1.1초는 앞선 시간에 비해 상당히 긴 시간이지만, 모델 경량화 기법을 적용하면 시간을 더 줄일 수 있음   
