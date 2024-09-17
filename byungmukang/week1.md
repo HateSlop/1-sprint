@@ -84,13 +84,167 @@
   - 데이터 로깅: 사용자의 입력과 LLM이 생성한 출력을 기록
     + 입력이 동일해도 출력이 달라질 수 있기 때문에 어떤 입력에서 어떤 출력을 반환했는지 기록 필요
     + 서비스 운영, 어플리케이션 개선, 고도화
-
 # 10. 임베딩 모델로 데이터 의미 압축하기
 ## 텍스트 임베딩 이해하기
+  - 임베딩: 데이터의 의미를 압축한 숫자 배열
+  - 텍스트 임베딩: 여러 문장의 텍스트를 임베딩 벡터로 변환하는 방식
+  - 원핫 인코딩: 단어를 벡터로 변환할 때, 해당 단어에만 1을 넣고 나머지는 모두 0으로 표현하는 방식
+    + 데이터 사이에 의도하지 않은 관계가 담기는걸 방지
+    + 단어 사이의 관계 표현 X
+  - 백오브워즈(Bag of Words): 문서를 단어들의 순서 없이 각 단어의 출현 빈도만을 고려해 벡터로 표현하는 기법
+  - TF-IDF: 문서 내에서 단어의 빈도(TF)와 그 단어가 전체 문서에서 얼마나 희귀한지(IDF)를 고려해 단어의 중요도를 측정하는 방법
+  - 밀집 임베딩: 고차원 공간에서 단어 또는 문장을 의미적으로 유사한 값으로 나타내는 벡터 표현
+    + 벡터가 대부분의 값이 0이 아니며, 더 작은 차원에서 의미를 압축해 표현
+  - 워드투벡: 단어가 문맥에서 함께 등장하는 패턴을 학습해 단어의 의미를 압축하는 임베딩 방법
 ## 문장 임베딩 방식
+  - 바이 인코더: 각각의 문장을 독립적으로 BERT와 같은 모델에 입력하여 문장 임베딩 벡터를 생성한 후, 이 벡터들 간의 유사도를 코사인 유사도와 같은 방법으로 계산하는 방식
+  - 교차 인코더: 두 문장을 함께 BERT와 같은 모델에 입력하여, 모델이 두 문장 사이의 관계나 유사도를 직접 0에서 1 사이의 값으로 출력하는 방식
+  - 교차 인코더는 모든 문장 조합에 대해 유사도를 계산해야 가장 유사한 문장을 검색할 수 있기 때문에 확장성 부족
+  - 바이 인코더는 임베딩을 재사용하면서 계산량을 줄임
+  - 오픈소스와 상업용 임베딩 모델
+    + 상업용 임베딩 모델: 뛰어난 성능, 미세조정 기능 X,  ex) OpenAI의 text-embedding-ada-002
+    + 오픈소스 모델: 자신의 데이터에 맞춰 미세 조정 수행 가능, ex) Sentence-Transformers 라이브러리
 ## 실습: 의미 검색 구현하기
+  - 의미 검색: 밀집 임베딩을 이용해 문장이나 문서의 의미를 고려한 검색
+- ### 실습에 사용할 모델과 데이터셋
+```python
+from datasets import load_dataset
+from sentence_transformers import SentenceTransformer
+
+klue_mrc_dataset = load_dataset('klue', 'mrc', split='train')
+sentence_model = SentenceTransformer('snunlp/KR-SBERT-V40K-klueNLI-augSTS')
+```
+- ### 실습 데이터에서 1000개만 선택하고 문장 임베딩으로 변환
+```python
+klue_mrc_dataset = klue_mrc_dataset.train_test_split(train_size=1000, shuffle=False)['train']
+embeddings = sentence_model.encode(klue_mrc_dataset['context'])
+embeddings.shape
+# 출력 결과
+# (1000, 768)
+```
+- ### KNN 검색 인덱스를 생성하고 문장 임베딩 저장
+```python
+import faiss
+# 인덱스 만들기
+index = faiss.IndexFlatL2(embeddings.shape[1])
+# 인덱스에 임베딩 저장하기
+index.add(embeddings)
+```
+- ### 라마인덱스에서 Sentence-Transformers 임베딩 모델 활용
+```python
+from llama_index.core import VectorStoreIndex, ServiceContext
+from llama_index.core import Document
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+embed_model = HuggingFaceEmbedding(model_name="snunlp/KR-SBERT-V40K-klueNLI-augSTS")
+service_context = ServiceContext.from_defaults(embed_model=embed_model, llm=None)
+# 로컬 모델 활용하기
+# service_context = ServiceContext.from_defaults(embed_model="local")
+
+text_list = klue_mrc_dataset[:100]['context']
+documents = [Document(text=t) for t in text_list]
+
+index_llama = VectorStoreIndex.from_documents(
+    documents,
+    service_context=service_context,
+)
+```
 ## 검색 방식을 조합해 성능 높이기
+  - 키워드 검색: 동일한 키워드가 많이 포함될수록 유사도를 높게 평가하는 검색 방식
+    + BM25: TF-IDF와 유사한 통계 기반 스코어링 방법으로, TF-IDF에 문서의 길이에 대한 가중치를 추가한 알고리즘
+  -![](images/표10_4.jpg)
+  - 하이브리드 검색: 의미 검색과 키워드 검색의 단점을 보완하기 위해 두 검색 방식을 조합하는 방식
+    + 점수마다 분포가 다르기 때문에 두 점수를 그대로 더하면 둘 중 하나의 영향을 더 크게 반영
+    + 이를 해결하기 위해 상호 순위 조합 이용
+    + 상호 순위 조합: 각 점수에서의 순위를 활용해 점수를 산출하는 방식
+  -![](images/그림10_17jpg)
 ## 실습: 하이브리드 검색 구현하기
+- ### BM25 구현
+```python
+import math
+import numpy as np
+from typing import List
+from transformers import PreTrainedTokenizer
+from collections import defaultdict
+
+class BM25:
+  def __init__(self, corpus:List[List[str]], tokenizer:PreTrainedTokenizer):
+    self.tokenizer = tokenizer
+    self.corpus = corpus
+    self.tokenized_corpus = self.tokenizer(corpus, add_special_tokens=False)['input_ids']
+    self.n_docs = len(self.tokenized_corpus)
+    self.avg_doc_lens = sum(len(lst) for lst in self.tokenized_corpus) / len(self.tokenized_corpus)
+    self.idf = self._calculate_idf()
+    self.term_freqs = self._calculate_term_freqs()
+
+  def _calculate_idf(self):
+    idf = defaultdict(float)
+    for doc in self.tokenized_corpus:
+      for token_id in set(doc):
+        idf[token_id] += 1
+    for token_id, doc_frequency in idf.items():
+      idf[token_id] = math.log(((self.n_docs - doc_frequency + 0.5) / (doc_frequency + 0.5)) + 1)
+    return idf
+
+  def _calculate_term_freqs(self):
+    term_freqs = [defaultdict(int) for _ in range(self.n_docs)]
+    for i, doc in enumerate(self.tokenized_corpus):
+      for token_id in doc:
+        term_freqs[i][token_id] += 1
+    return term_freqs
+
+  def get_scores(self, query:str, k1:float = 1.2, b:float=0.75):
+    query = self.tokenizer([query], add_special_tokens=False)['input_ids'][0]
+    scores = np.zeros(self.n_docs)
+    for q in query:
+      idf = self.idf[q]
+      for i, term_freq in enumerate(self.term_freqs):
+        q_frequency = term_freq[q]
+        doc_len = len(self.tokenized_corpus[i])
+        score_q = idf * (q_frequency * (k1 + 1)) / ((q_frequency) + k1 * (1 - b + b * (doc_len / self.avg_doc_lens)))
+        scores[i] += score_q
+    return scores
+
+  def get_top_k(self, query:str, k:int):
+    scores = self.get_scores(query)
+    top_k_indices = np.argsort(scores)[-k:][::-1]
+    top_k_scores = scores[top_k_indices]
+    return top_k_scores, top_k_indices
+```
+- ### BM25 점수 계산
+```python
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained('klue/roberta-base')
+
+bm25 = BM25(['안녕하세요', '반갑습니다', '안녕 서울'], tokenizer)
+bm25.get_scores('안녕')
+# array([0.44713859, 0.        , 0.52354835])
+```
+- ### 상호 순위 조합 함수 구현
+```python
+from collections import defaultdict
+
+def reciprocal_rank_fusion(rankings:List[List[int]], k=5):
+    rrf = defaultdict(float)
+    for ranking in rankings:
+        for i, doc_id in enumerate(ranking, 1):
+            rrf[doc_id] += 1.0 / (k + i)
+    return sorted(rrf.items(), key=lambda x: x[1], reverse=True)
+```
+- ### 하이브리드 검색 구현
+```python
+def dense_vector_search(query:str, k:int):
+  query_embedding = sentence_model.encode([query])
+  distances, indices = index.search(query_embedding, k)
+  return distances[0], indices[0]
+
+def hybrid_search(query, k=20):
+  _, dense_search_ranking = dense_vector_search(query, 100)
+  _, bm25_search_ranking = bm25.get_top_k(query, 100)
+
+  results = reciprocal_rank_fusion([dense_search_ranking, bm25_search_ranking], k=k)
+  return results
+```
 # 11. 자신의 데이터에 맞춘 임베딩 모델 만들기: RAG 개선하기
 ## 검색 성능을 높이기 위한 두 가지 방버
 ## 언어 모델을 임베딩 모델로 만들기
