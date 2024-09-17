@@ -157,7 +157,7 @@ index_llama = VectorStoreIndex.from_documents(
     + 점수마다 분포가 다르기 때문에 두 점수를 그대로 더하면 둘 중 하나의 영향을 더 크게 반영
     + 이를 해결하기 위해 상호 순위 조합 이용
     + 상호 순위 조합: 각 점수에서의 순위를 활용해 점수를 산출하는 방식
-  -![](pics/그림10_17jpg)
+  -![](pics/그림10_17.jpg)
 ## 실습: 하이브리드 검색 구현하기
 - ### BM25 구현
 ```python
@@ -246,8 +246,126 @@ def hybrid_search(query, k=20):
   return results
 ```
 # 11. 자신의 데이터에 맞춘 임베딩 모델 만들기: RAG 개선하기
-## 검색 성능을 높이기 위한 두 가지 방버
+## 검색 성능을 높이기 위한 두 가지 방법
+  - 바이 인코더를 추가 학습해 검색 성능 향상
+  - 교차 인코더를 추가해 성능 향상
 ## 언어 모델을 임베딩 모델로 만들기
+  - 대조 학습: 유사한 데이터는 더 가까워지도록 만들고 유사하지 않은 데이터는 멀어지도록 하는 학습 방식
 ## 임베딩 모델 미세 조정하기
+  - MNR 손실 함수: 문장 쌍 유사도를 비교할 때 부정적인(negative) 쌍의 순위를 학습하여 잘못된 문장 쌍의 유사도를 낮추는 방식으로 사용하는 손실 함수
+- ### MNR 손실 함수 불러오기 및 MRC 데이터셋으로 미세 조정
+```python
+from sentence_transformers import losses
+
+loss = losses.MultipleNegativesRankingLoss(sentence_model)
+epochs = 1
+save_path = './klue_mrc_mnr'
+
+sentence_model.fit(
+    train_objectives=[(loader, loss)],
+    epochs=epochs,
+    warmup_steps=100,
+    output_path=save_path,
+    show_progress_bar=True
+)
+```
 ## 검색 품질을 높이는 순위 재정렬
+ - ### 교차 인코더
+```python
+from sentence_transformers.cross_encoder import CrossEncoder
+cross_model = CrossEncoder('klue/roberta-small', num_labels=1)
+from sentence_transformers.cross_encoder.evaluation import CECorrelationEvaluator
+ce_evaluator = CECorrelationEvaluator.from_input_examples(examples)
+ce_evaluator(cross_model)
+# 0.003316821814673943
+train_samples = []
+for idx, row in df_train_ir.iterrows():
+    train_samples.append(InputExample(
+        texts=[row['question'], row['context']], label=1
+    ))
+    train_samples.append(InputExample(
+        texts=[row['question'], row['irrelevant_context']], label=0
+    ))
+train_batch_size = 16
+num_epochs = 1
+model_save_path = 'output/training_mrc'
+
+train_dataloader = DataLoader(train_samples, shuffle=True, batch_size=train_batch_size)
+
+cross_model.fit(
+    train_dataloader=train_dataloader,
+    epochs=num_epochs,
+    warmup_steps=100,
+    output_path=model_save_path
+)
+ce_evaluator(cross_model)
+# 0.8650250798639563
+```
 ## 바이 인코더와 교차 인코더로 개선된 RAG 구현하기
+  - RAG를 개선하기 위해서 3가지 경우의 수인 기본 임베딩 모델로 검색, 미세 조정한 임베딩 모델로 검색, 미세 조정한 모델과 교차 인코더를 결합하여 검색, 이렇게 3가지 방법을 비교
+- ### 성능 지표(히트율)와 평가에 걸린 시간을 반환하는 함수
+```python
+import time
+def evaluate_hit_rate(datasets, embedding_model, index, k=10):
+  start_time = time.time()
+  predictions = []
+  for question in datasets['question']:
+    predictions.append(find_embedding_top_k(question, embedding_model, index, k)[0])
+  total_prediction_count = len(predictions)
+  hit_count = 0
+  questions = datasets['question']
+  contexts = datasets['context']
+  for idx, prediction in enumerate(predictions):
+    for pred in prediction:
+      if contexts[pred] == contexts[idx]:
+        hit_count += 1
+        break
+  end_time = time.time()
+  return hit_count / total_prediction_count, end_time - start_time
+```
+- ### 기본 임베딩 모델
+```python
+from sentence_transformers import SentenceTransformer
+base_embedding_model = SentenceTransformer('shangrilar/klue-roberta-base-klue-sts')
+base_index = make_embedding_index(base_embedding_model, klue_mrc_test['context'])
+evaluate_hit_rate(klue_mrc_test, base_embedding_model, base_index, 10)
+# (0.88, 13.216430425643921)
+```
+- ### 미세 조정한 임베딩 모델
+```python
+finetuned_embedding_model = SentenceTransformer('shangrilar/klue-roberta-base-klue-sts-mrc')
+finetuned_index = make_embedding_index(finetuned_embedding_model, klue_mrc_test['context'])
+evaluate_hit_rate(klue_mrc_test, finetuned_embedding_model, finetuned_index, 10)
+# (0.946, 14.309881687164307)
+```
+- ### 순위 재정렬을 포함한 평가 함수
+```python
+import time
+import numpy as np
+from tqdm.auto import tqdm
+
+def evaluate_hit_rate_with_rerank(datasets, embedding_model, cross_model, index, bi_k=30, cross_k=10):
+  start_time = time.time()
+  predictions = []
+  for question_idx, question in enumerate(tqdm(datasets['question'])):
+    indices = find_embedding_top_k(question, embedding_model, index, bi_k)[0]
+    predictions.append(rerank_top_k(cross_model, question_idx, indices, k=cross_k))
+  total_prediction_count = len(predictions)
+  hit_count = 0
+  questions = datasets['question']
+  contexts = datasets['context']
+  for idx, prediction in enumerate(predictions):
+    for pred in prediction:
+      if contexts[pred] == contexts[idx]:
+        hit_count += 1
+        break
+  end_time = time.time()
+  return hit_count / total_prediction_count, end_time - start_time, predictions
+```
+- ### 임베딩 모델과 교차 인코더를 조합한 성능(순위 재정렬 포함)
+```python
+hit_rate, cosumed_time, predictions = evaluate_hit_rate_with_rerank(klue_mrc_test, finetuned_embedding_model, cross_model, finetuned_index, bi_k=30, cross_k=10)
+hit_rate, cosumed_time
+# (0.973, 1103.055629491806)
+```
+- ![](pics/표11_1.jpg)
