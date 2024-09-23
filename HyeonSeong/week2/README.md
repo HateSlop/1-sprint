@@ -92,38 +92,146 @@ HNSW는 이런 계층 구조를 NSW에 접목해 벡터를 저장하는데 아�
 ### 12.3.1 파라미터 m 이해하기
 HNSW에서 파라미터 m은 추가하는 임베딩 벡터에 연결하는 간선의 수   
 벡터에 연결되는 간선이 많을수록 그래프가 더 촘촘하게 연결되기 때문에 검색의 품질이 좋음   
+```
+import numpy as np
 
-예제 12.4   
+k=1
+d = xq.shape[1]
+nq = 1000
+xq = xq[:nq]
 
+for m in [8, 16, 32, 64]:
+    index = faiss.IndexHNSWFlat(d, m)
+    time.sleep(3)
+    start_memory = get_memory_usage_mb()
+    start_index = time.time()
+    index.add(xb)
+    end_memory = get_memory_usage_mb()
+    end_index = time.time()
+    print(f"M: {m} - 색인 시간: {end_index - start_index} s, 메모리 사용량: {end_memory - start_memory} MB")
+
+    t0 = time.time()
+    D, I = index.search(xq, k)
+    t1 = time.time()
+
+    recall_at_1 = np.equal(I, gt[:nq, :1]).sum() / float(nq)
+    print(f"{(t1 - t0) * 1000.0 / nq:.3f} ms per query, R@1 {recall_at_1:.3f}")
+```
 표 12.2   
 
 ### 12.3.2 파라미터 ef_construction 이해하기
 **ef_construction**은 M개의 가장 가까운 벡터를 선택할 후보군의 크기로, 이 값이 크면 더 많은 후보를 탐색하기 때문에 실제로 추가한 벡터와 가장 가까운 벡터를 선택할 가능성이 높음   
+```
+k=1
+d = xq.shape[1]
+nq = 1000
+xq = xq[:nq]
 
-예제 12.5   
+for ef_construction in [40, 80, 160, 320]:
+    index = faiss.IndexHNSWFlat(d, 32)
+    index.hnsw.efConstruction = ef_construction
+    time.sleep(3)
+    start_memory = get_memory_usage_mb()
+    start_index = time.time()
+    index.add(xb)
+    end_memory = get_memory_usage_mb()
+    end_index = time.time()
+    print(f"efConstruction: {ef_construction} - 색인 시간: {end_index - start_index} s, 메모리 사용량: {end_memory - start_memory} MB")
 
+    t0 = time.time()
+    D, I = index.search(xq, k)
+    t1 = time.time()
+
+    recall_at_1 = np.equal(I, gt[:nq, :1]).sum() / float(nq)
+    print(f"{(t1 - t0) * 1000.0 / nq:.3f} ms per query, R@1 {recall_at_1:.3f}")
+```
 표 12.3   
 
 ### 12.3.3 파라미터 ef_search 이해하기
 **ef_search**는 ef_construction이 색인 단계에서 후보군의 크기를 결정한 것과 동일하게 검색 단계에서 후보군의 크기를 결정   
+```
+for ef_search in [16, 32, 64, 128]:
+    index.hnsw.efSearch = ef_search
+    t0 = time.time()
+    D, I = index.search(xq, k)
+    t1 = time.time()
 
-예제 12.6   
-
+    recall_at_1 = np.equal(I, gt[:nq, :1]).sum() / float(nq)
+    print(f"{(t1 - t0) * 1000.0 / nq:.3f} ms per query, R@1 {recall_at_1:.3f}") 
+```
 표 12.4   
 
 ## 12.4 실습: 파인콘으로 벡터 검색 구현하기
 ### 12.4.1 파인콘 클라이언트 사용법
-예제 12.8   
+```
+from datasets import load_dataset
+from sentence_transformers import SentenceTransformer
+# 임베딩 모델 불러오기
+sentence_model = SentenceTransformer('snunlp/KR-SBERT-V40K-klueNLI-augSTS')
+# 데이터셋 불러오기
+klue_dp_train = load_dataset('klue', 'dp', split='train[:100]')
+
+embeddings = sentence_model.encode(klue_dp_train['sentence'])
+```
 파인콘 인덱스에 저장할 수 있도록 tolist() 메서드를 사용해 형태를 변경   
-예제 12.9   
-예제 12.11   
+```
+# 파이썬 기본 데이터 타입으로 변경
+embeddings = embeddings.tolist()
+# {"id": 문서 ID(str), "values": 벡터 임베딩(List[float]), "metadata": 메타 데이터(dict) ) 형태로 데이터 준비
+insert_data = []
+for idx, (embedding, text) in enumerate(zip(embeddings, klue_dp_train['sentence'])):
+  insert_data.append({"id": str(idx), "values": embedding, "metadata": {'text': text}})
+```
+```
+query_response = index.query(
+    namespace='llm-book-sub', # 검색할 네임스페이스
+    top_k=10, # 몇 개의 결과를 반환할지
+    include_values=True, # 벡터 임베딩 반환 여부
+    include_metadata=True, # 메타 데이터 반환 여부
+    vector=embeddings[0] # 검색할 벡터 임베딩
+)
+query_response
+```
 
 ### 12.4.2 라마인덱스에서 벡터 데이터베이스 변경하기
-예제 12.13   
+```
+# 파인콘 기본 설정
+from pinecone import Pinecone, ServerlessSpec
 
+pc = Pinecone(api_key=pinecone_api_key)
+pc.create_index(
+    "quickstart", dimension=1536, metric="euclidean", spec=ServerlessSpec("aws", "us-east-1")
+)
+pinecone_index = pc.Index("quickstart")
+
+# 라마인덱스에 파인콘 인덱스 연결
+from llama_index.core import VectorStoreIndex
+from llama_index.vector_stores.pinecone import PineconeVectorStore
+from llama_index.core import StorageContext
+
+vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+index = VectorStoreIndex.from_documents(
+    documents, storage_context=storage_context
+)
+```
 ## 12.5 실습: 파인콘을 활용해 멀티 모달 검색 구현하기
 ### 12.5.1 데이터셋
-예제 12.14   
+```
+from datasets import load_dataset
+
+dataset = load_dataset("poloclub/diffusiondb", "2m_first_1k", split='train')
+
+example_index = 867
+original_image = dataset[example_index]['image']
+original_prompt = dataset[example_index]['prompt']
+print(original_prompt)
+
+# cute fluffy baby cat rabbit lion hybrid mixed creature character concept,
+# with long flowing mane blowing in the wind, long peacock feather tail,
+# wearing headdress of tribal peacock feathers and flowers, detailed painting,
+# renaissance, 4 k
+```
 
 ### 12.5.2 실습 흐름
 1. 원본 이미지와 세 가지 프롬프트로 생성한 3개의 합성 이미지를 비교   
@@ -133,24 +241,127 @@ HNSW에서 파라미터 m은 추가하는 임베딩 벡터에 연결하는 간�
 그림 12.19   
 
 ### 12.5.3 GPT-4o로 이미지 설명 생성하기
-예제 12.15   
+```
+import requests
+import base64
+from io import BytesIO
+
+def make_base64(image):
+  buffered = BytesIO()
+  image.save(buffered, format="JPEG")
+  img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+  return img_str
+
+def generate_description_from_image_gpt4(prompt, image64):
+  headers = {
+      "Content-Type": "application/json",
+      "Authorization": f"Bearer {client.api_key}"
+  }
+  payload = {
+      "model": "gpt-4o",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": prompt
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": f"data:image/jpeg;base64,{image64}"
+              }
+            }
+          ]
+        }
+      ],
+      "max_tokens": 300
+  }
+  response_oai = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+  result = response_oai.json()['choices'][0]['message']['content']
+  return result
+```
 
 ### 12.5.4 프롬프트 저장
 아래 예제를 통해 프롬프트 임베딩을 저장하고 이미지 임베딩으로 검색할 인덱스를 생성   
-예제 12.18   
+```
+print(pc.list_indexes())
+
+index_name = "llm-multimodal"
+try:
+  pc.create_index(
+    name=index_name,
+    dimension=512,
+    metric="cosine",
+    spec=ServerlessSpec(
+      "aws", "us-east-1"
+    )
+  )
+  print(pc.list_indexes())
+except:
+  print("Index already exists")
+index = pc.Index(index_name)
+```
 아래 예제를 사용해 생성한 임베딩 벡터를 벡터 데이터베이스에 저장   
-예제 12.20   
+```
+input_data = []
+for id_int, emb, prompt in zip(range(0, len(dataset)), text_embs.tolist(), dataset['prompt']):
+  input_data.append(
+      {
+          "id": str(id_int),
+          "values": emb,
+          "metadata": {
+              "prompt": prompt
+          }
+      }
+  )
+
+index.upsert(
+  vectors=input_data
+)
+```
 
 ### 12.5.5 이미지 임베딩 검색
-예제 12.21   
+```
+from transformers import AutoProcessor, CLIPVisionModelWithProjection
+
+vision_model = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-base-patch32")
+processor = AutoProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+inputs = processor(images=original_image, return_tensors="pt")
+
+outputs = vision_model(**inputs)
+image_embeds = outputs.image_embeds
+
+search_results = index.query(
+  vector=image_embeds[0].tolist(),
+  top_k=3,
+  include_values=False,
+  include_metadata=True
+)
+searched_idx = int(search_results['matches'][0]['id'])
+``` 
 
 ### 12.5.6 DALL-E 3로 이미지 생성
 아래의 코드를 사용해 3개의 프롬프트에 대한 이미지를 생성
 1. GPT-4o가 원본 이미지를 설명해서 작성한 GPT 설명 프롬프트로 이미지 생성
 2. 원본 프롬프트를 사용해 이미지 생성
 3. 이미지 임베딩으로 검색한 유사 프롬프트를 사용해 이미지 생성   
-
-예제 12.24
+```
+# GPT-4o가 만든 프롬프트로 이미지 생성
+gpt_described_image_url = generate_image_dalle3(described_result)
+gpt4o_prompt_image = get_generated_image(gpt_described_image_url)
+gpt4o_prompt_image
+# 원본 프롬프트로 이미지 생성
+original_prompt_image_url = generate_image_dalle3(original_prompt)
+original_prompt_image = get_generated_image(original_prompt_image_url)
+original_prompt_image
+# 이미지 임베딩으로 검색한 유사 프롬프트로 이미지 생성
+searched_prompt_image_url = generate_image_dalle3(dataset[searched_idx]['prompt'])
+searched_prompt_image = get_generated_image(searched_prompt_image_url)
+searched_prompt_image
+```
 
 출력결과는 아래와 같이 이미지 생성 파라미터에 따라 생성 결과가 달라지고 랜덤성이 있음   
 
@@ -291,7 +502,20 @@ CLRP 모델은 이미지와 텍스트 데이터 사이의 유사도 계산을 �
 ### 14.2.4 CLIP 모델 직접 활용하기
 먼저 입력 데이터의 전처리를 담당하는 프로세서와 이미지와 텍스트 임베딩 모델을 가져옴   
 
-예제 14.2   
+```
+import requests
+from PIL import Image
+
+url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+image = Image.open(requests.get(url, stream=True).raw)
+
+inputs = processor(text=["a photo of a cat", "a photo of a dog"], images=image, return_tensors="pt", padding=True)
+
+outputs = model(**inputs)
+logits_per_image = outputs.logits_per_image
+probs = logits_per_image.softmax(dim=1)
+probs
+```
 
 ## 14.3 텍스트로 이미지를 생성하는 모델: DALL-E
 ### 14.3.1 디퓨전 모델 원리
@@ -398,9 +622,6 @@ LLM은 텍스트만을 생성할 수 있기 때문에 외부에 영향을 미치
 ## 15.2 에이전트 시스템의 형태
 ### 15.2.1 단일 에이전트
 목표만 입력하면 알아서 작업을 수행하는 AutoGPT의 경우 입력받은 프롬프트를 통해 모든 결정을 내림   
-
-예제 15.1   
-
 단일 에이전트의 경우 모든 과정을 스스로 처리하기 때문에 매우 편리하고 범용적인 작업을 처리할 수 있는 프롬프트로 동작하기 때문에 다양한 작업에서 사용될 수 있지만 작업을 수행하는 과정에서 길을 잃을 가능성도 큼   
 
 ### 15.2.2 사용자와 에이전트의 상호작용
@@ -444,23 +665,138 @@ LLM은 텍스트만을 생성할 수 있기 때문에 외부에 영향을 미치
 AutoGen에는 크게 두 종류의 에이전트가 있음   
 1. UserProxyAgent - 사용자의 역할을 대신함   
 2. AssistantAgent - 사용자의 요청을 처리함   
+```
+from autogen import AssistantAgent, UserProxyAgent
 
-예제 15.4   
+assistant = AssistantAgent("assistant", llm_config=llm_config)
+user_proxy = UserProxyAgent("user_proxy",
+  is_termination_msg=lambda x: x.get("content", "") and x.get("content", "").rstrip().endswith("TERMINATE"),
+  human_input_mode="NEVER",
+  code_execution_config={"work_dir": "coding", "use_docker": False})
+```
 
 그림 15.12   
 
 ### 15.4.2 RAG 에이전트
+```
+import autogen
+from autogen.agentchat.contrib.retrieve_assistant_agent import RetrieveAssistantAgent
+from autogen.agentchat.contrib.retrieve_user_proxy_agent import RetrieveUserProxyAgent
 
-예제 15.6   
+assistant = RetrieveAssistantAgent(
+    name="assistant",
+    system_message="You are a helpful assistant.",
+    llm_config=llm_config,
+)
+
+ragproxyagent = RetrieveUserProxyAgent(
+    name="ragproxyagent",
+    retrieve_config={
+        "task": "qa",
+        "docs_path": "https://raw.githubusercontent.com/microsoft/autogen/main/README.md",
+        "collection_name": "default-sentence-transformers"
+    },
+)
+
+assistant.reset()
+ragproxyagent.initiate_chat(assistant, problem="AutoGen이 뭐야?")
+
+# assistant (to ragproxyagent):
+# AutoGen은 여러 에이전트가 상호 대화하여 작업을 해결할 수 있는 LLM(Large Language Model) 애플리케이션 개발을 가능하게 하는 프레임워크입니다. 
+```
+AutoGen 에이전트는 사용자 정의 가능하며, 대화 가능하고, 인간 참여를 원활하게 허용합니다. LLM, 인간 입력, 도구의 조합을 사용하는 다양한 모드에서 작동할 수 있습니다.
 
 AutoGen에서는 RAG를 구현할 때 기본적으로 텍스트 임베딩 모델에 Sentence-Transformers 라이브러리를 사용하고, 벡터 데이터베이스로는 크로마를 사용   
 총 4개의 에이전트가 협업하는 그룹챗(GroupChat)을 생성   
 
-예제 15.9   
+```
+def termination_msg(x):
+    return isinstance(x, dict) and "TERMINATE" == str(x.get("content", ""))[-9:].upper()
+
+# RAG를 사용하지 않는 사용자 역할 에이전트
+user = autogen.UserProxyAgent(
+    name="Admin",
+    is_termination_msg=termination_msg,
+    human_input_mode="NEVER",
+    system_message="The boss who ask questions and give tasks.",
+    code_execution_config=False,
+    default_auto_reply="Reply `TERMINATE` if the task is done.",
+)
+# RAG를 사용하는 사용자 역할 에이전트
+user_rag = RetrieveUserProxyAgent(
+    name="Admin_RAG",
+    is_termination_msg=termination_msg,
+    system_message="Assistant who has extra content retrieval power for solving difficult problems.",
+    human_input_mode="NEVER",
+    max_consecutive_auto_reply=3,
+    code_execution_config=False,
+    retrieve_config={
+        "task": "code",
+        "docs_path": "https://raw.githubusercontent.com/microsoft/autogen/main/samples/apps/autogen-studio/README.md",
+        "chunk_token_size": 1000,
+        "collection_name": "groupchat-rag",
+    }
+)
+# 프로그래머 역할의 에이전트
+coder = AssistantAgent(
+    name="Senior_Python_Engineer",
+    is_termination_msg=termination_msg,
+    system_message="You are a senior python engineer. Reply `TERMINATE` in the end when everything is done.",
+    llm_config=llm_config,
+)
+# 프로덕트 매니저 역할의 에이전트
+pm = autogen.AssistantAgent(
+    name="Product_Manager",
+    is_termination_msg=termination_msg,
+    system_message="You are a product manager. Reply `TERMINATE` in the end when everything is done.",
+    llm_config=llm_config,
+)
+
+PROBLEM = "AutoGen Studio는 무엇이고 AutoGen Studio로 어떤 제품을 만들 수 있을까?"
+``` 
 
 ### 15.4.3 멀티 모달 에이전트
 
-예제 15.13   
+```
+def dalle_call(client, prompt, model="dall-e-3", size="1024x1024", quality="standard", n=1) -> str:
+    response = client.images.generate(
+        model=model,
+        prompt=prompt,
+        size=size,
+        quality=quality,
+        n=n,
+    )
+    image_url = response.data[0].url
+    img_data = get_image_data(image_url)
+    return img_data
+
+class DALLEAgent(ConversableAgent):
+    def __init__(self, name, llm_config: dict, **kwargs):
+        super().__init__(name, llm_config=llm_config, **kwargs)
+
+        try:
+            config_list = llm_config["config_list"]
+            api_key = config_list[0]["api_key"]
+        except Exception as e:
+            print("Unable to fetch API Key, because", e)
+            api_key = os.getenv("OPENAI_API_KEY")
+        self.client = OpenAI(api_key=api_key)
+        self.register_reply([Agent, None], DALLEAgent.generate_dalle_reply)
+
+    def generate_dalle_reply(self, messages, sender, config):
+        client = self.client if config is None else config
+        if client is None:
+            return False, None
+        if messages is None:
+            messages = self._oai_messages[sender]
+
+        prompt = messages[-1]["content"]
+        img_data = dalle_call(client=self.client, prompt=prompt)
+        plt.imshow(_to_pil(img_data))
+        plt.axis("off")
+        plt.show()
+        return True, 'result.jpg'
+```
 
 이미지를 설명하는 에이전트와 그림을 생성하는 에이전트가 협력해 이미지를 입력했을 때 유사한 이미지를 알아서 생성   
 
@@ -534,4 +870,41 @@ GPU IO를 최소화 하기 위해 중간 과정을 저장하지 않는데, 이�
 2. d_inner - 모델 내부적으로 토큰 임베딩을 확장해 사용하는 차원   
 3. d_state - 선택 메커니즘에서 입력을 확장할 때 사용하는 상태 차원   
 
-예제 16.1   
+```
+class MambaBlock(nn.Module):
+    def __init__(self, args: ModelArgs):
+        super().__init__()
+        self.args = args
+        self.in_proj = nn.Linear(args.d_model, args.d_inner * 2, bias=args.bias)
+        self.conv1d = nn.Conv1d(
+            in_channels=args.d_inner,
+            out_channels=args.d_inner,
+            bias=args.conv_bias,
+            kernel_size=args.d_conv,
+            groups=args.d_inner,
+            padding=args.d_conv - 1,
+        )
+        # ssm 내부에서 사용
+        # 입력 x를 확장해 Δ, B, C를 위한 벡터를 생성하는 층
+        self.x_proj = nn.Linear(args.d_inner, args.dt_rank + args.d_state * 2, bias=False)
+        # dt_rank차원을 d_inner차원으로 확장해 Δ 생성하는 층
+        self.dt_proj = nn.Linear(args.dt_rank, args.d_inner, bias=True)
+        A = repeat(torch.arange(1, args.d_state + 1), 'd_state -> d_model d_state',
+        d=args.d_inner)
+        self.A_log = nn.Parameter(torch.log(A))
+        self.D = nn.Parameter(torch.ones(args.d_inner))
+        self.out_proj = nn.Linear(args.d_inner, args.d_model, bias=args.bias)
+    def forward(self, x):
+        (b, l, d_model) = x.shape
+        x_and_res = self.in_proj(x) # shape (b, l, 2 * d_inner)
+        (x, res) = x_and_res.split(split_size=[self.args.d_inner, self.args.d_inner],
+        dim=-1)
+        x = rearrange(x, 'b l d_inner -> b d_inner l')
+        x = self.conv1d(x)[:, :, :l]
+        x = rearrange(x, 'b d_inner l -> b l d_inner')
+        x = F.silu(x)
+        y = self.ssm(x)
+        y = y * F.silu(res)
+        output = self.out_proj(y)
+    return output
+```
