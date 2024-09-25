@@ -361,13 +361,222 @@ searched_prompt_image
   - LLaVA: 이미지를 인식하는 CLIP 모델과 LLM을 결합해 모델이 이미지를인식하고 이미지에 대한 택스트 생성 가능
 # 15. LLM 에이전트
 ## 에이전트란
+  - 에이전트: 주변 환경을 감각을 통해 인식하고 의사 결정을 내려 행동하는 인공적인 개체
+  - 감각: 외부 환경과 사용자의 요청 인식
+  - 두뇌: 가지고 있는 지식이나 지금까지의 기억을 확인해보고 계획을 세우고 추론을 통해 다음에 어떤 행동을 해야 할지 선택 ex) 심볼릭 AI, 강화 학습, 메타 러닝, LLM
+  - 행동: 문제를 해결할 수 있는 적절한 도구 선택
 ## 에이전트 시스템의 형태
+  - 단일 에이전트: 하나의 에이전트가 모든 작업을 수행하는 방식
+  - 상호작용 방식: 사용자와 협력하여 문제를 해결하는 방식
+  - 멀티 에이전트: 여러 역할의 에이전트가 협력해 문제를 해결하는 방식
+- ### AutoGPT 구현에 사용하는 프롬프트
+```python
+You are Story-GPT, an AI designed to autonomously write stories.
+Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
+
+GOALS:
+1. write a short story about flowers
+
+Constraints:
+1. 4000 word limit for short term memory. Your short term memory is short, so immediately save important information to files.
+2. If you are unsure how you previously did something or want to recall past events, thinking about similar events will help you remember.
+3. No user assistance
+4. Exclusively use the commands listed in double quotes e.g. "command name"
+
+Commands:
+1. Google Search: "google", args: "input": "<search>"
+2. Browse Website: "browse_website", args: "url": "<url>", "question": "<what_you_want_to_find_on_website>"
+3. Start GPT Agent: "start_agent", args: "name": "<name>", "task": "<short_task_desc>", "prompt": "<prompt>"
+4. Message GPT Agent: "message_agent", args: "key": "<key>", "message": "<message>"
+5. List GPT Agents: "list_agents", args:
+6. Delete GPT Agent: "delete_agent", args: "key": "<key>"
+7. Clone Repository: "clone_repository", args: "repository_url": "<url>", "clone_path": "<directory>"
+8. Write to file: "write_to_file", args: "file": "<file>", "text": "<text>"
+9. Read file: "read_file", args: "file": "<file>"
+10. Append to file: "append_to_file", args: "file": "<file>", "text": "<text>"
+11. Delete file: "delete_file", args: "file": "<file>"
+12. Search Files: "search_files", args: "directory": "<directory>"
+13. Evaluate Code: "evaluate_code", args: "code": "<full_code_string>"
+14. Get Improved Code: "improve_code", args: "suggestions": "<list_of_suggestions>", "code": "<full_code_string>"
+15. Write Tests: "write_tests", args: "code": "<full_code_string>", "focus": "<list_of_focus_areas>"
+16. Execute Python File: "execute_python_file", args: "file": "<file>"
+17. Generate Image: "generate_image", args: "prompt": "<prompt>"
+18. Send Tweet: "send_tweet", args: "text": "<text>"
+19. Do Nothing: "do_nothing", args:
+20. Task Complete (Shutdown): "task_complete", args: "reason": "<reason>"
+
+Resources:
+1. Internet access for searches and information gathering.
+2. Long Term memory management.
+3. GPT-3.5 powered Agents for delegation of simple tasks.
+4. File output.
+
+Performance Evaluation:
+1. Continuously review and analyze your actions to ensure you are performing to the best of your abilities.
+2. Constructively self-criticize your big-picture behavior constantly.
+3. Reflect on past decisions and strategies to refine your approach.
+4. Every command has a cost, so be smart and efficient. Aim to complete tasks in the least number of steps.
+
+You should only respond in JSON format as described below 
+Response Format: 
+{
+    "thoughts": {
+        "text": "thought",
+        "reasoning": "reasoning",
+        "plan": "- short bulleted\n- list that conveys\n- long-term plan",
+        "criticism": "constructive self-criticism",
+        "speak": "thoughts summary to say to user",
+    },
+    "command": {"name": "command name", "args": {"arg name": "value"}},
+}
+
+Ensure the response can be parsed by Python json.loads
+```
+  - 수행 과정
+    1. 에이전트의 이름과 역할 부여
+    2. 목표(GOALS) 지정
+    3. 제약사항 전달
+    4. 사용할 수 있는 도구 제공
+    5. 성능 평가
+    6. JSON 형태로 제공
 ## 에이전트 평가하기
+  - 튜링 테스트: 에이전트와 사람의 결과물을 구분할 수 있는지 확인하는 평가 방식
+  - 에이전트를 평가하는 기준
+    1. 유용성: 작업을 자동으로 수행하기 위해 에이전트를 사용하는 경우 작업  성공률 같은 기준으로 유용성을 평가
+    2. 사회성: 언어를 얼마나 숙련되게 사용하는지, 작업을 진행하는 과정에서 협력이나 협상이 필요한 경우 얼마나 뛰어난지, 역할을 부여한 경우 그 역할에 얼마나 부합하게 행동하는지를 평가
+    3. 가치관: 거짓말을 지어내지 않고 신뢰할 수 있는 정확한 정보를 전달하는지, 차별적이거나 편향이 있는지, 사회에 해가 될 수 있는 정보를 전달하는지 평가
+    4. 진화 능력: 지속적인 학습을 하는지, 스스로 목표를 설정하고 달성하는 학습 능력이 있는지, 환경에 적응하는 능력이 있는지 판단
 ## 실습: 에이전트 구현
+- ### API 키 설정
+```python
+import json
+
+openai_api_key = "자신의 API 키 입력"
+
+with open('OAI_CONFIG_LIST.json', 'w') as f:
+  config_list = [
+    {
+        "model": "gpt-4-turbo-preview",
+        "api_key": openai_api_key
+    },
+    {
+        "model": "gpt-4o",
+        "api_key": openai_api_key,
+    },
+    {
+        "model": "dall-e-3",
+        "api_key": openai_api_key,
+    }
+]
+  json.dump(config_list, f)
+```
+- ### 에이전트에 사용할 설정
+```python
+import autogen
+
+config_list = autogen.config_list_from_json(
+    "OAI_CONFIG_LIST.json",
+    file_location=".",
+    filter_dict={
+        "model": ["gpt-4-turbo-preview"],
+    },
+)
+
+llm_config = {
+    "config_list": config_list,
+    "temperature": 0,
+}
+```
+- ### AutoGen의 핵심 구성 요소
+```python
+from autogen import AssistantAgent, UserProxyAgent
+
+assistant = AssistantAgent("assistant", llm_config=llm_config)
+user_proxy = UserProxyAgent("user_proxy",
+  is_termination_msg=lambda x: x.get("content", "") and x.get("content", "").rstrip().endswith("TERMINATE"),
+  human_input_mode="NEVER",
+  code_execution_config={"work_dir": "coding", "use_docker": False})
+```
 # 16. 새로운 아키텍처
 ## 기존 아키텍처의 장단점
+-![](pics/표16_1.jpg)
 ## SSM
+  - SSM: state space model로, 내부 상태를 이용해 시간에 따라 달라지는 시스템을 해석하기 위해 사용하는 모델링 방법
 ## 선택 메커니즘
+  - LSTM: RNN에서 맥락을 더 효율적으로 압축하기 위해 입력을 얼마나 반영할지, 기존 상태를 얼머나 망각할지 결정하는 게이트를 추가한 모델
 ## 맘바
+  -![](pics/표16_4.jpg)
 ## 코드로 보는 맘바
-
+- ### 맘바 블록 코드
+```python
+class MambaBlock(nn.Module):
+    def __init__(self, args: ModelArgs):
+        super().__init__()
+        self.args = args
+        self.in_proj = nn.Linear(args.d_model, args.d_inner * 2, bias=args.bias)
+        self.conv1d = nn.Conv1d(
+            in_channels=args.d_inner,
+            out_channels=args.d_inner,
+            bias=args.conv_bias,
+            kernel_size=args.d_conv,
+            groups=args.d_inner,
+            padding=args.d_conv - 1,
+        )
+        # ssm 내부에서 사용
+        # 입력 x를 확장해 Δ, B, C를 위한 벡터를 생성하는 층
+        self.x_proj = nn.Linear(args.d_inner, args.dt_rank + args.d_state * 2, bias=False)
+        # dt_rank차원을 d_inner차원으로 확장해 Δ 생성하는 층
+        self.dt_proj = nn.Linear(args.dt_rank, args.d_inner, bias=True)
+        A = repeat(torch.arange(1, args.d_state + 1), 'd_state -> d_model d_state',
+        d=args.d_inner)
+        self.A_log = nn.Parameter(torch.log(A))
+        self.D = nn.Parameter(torch.ones(args.d_inner))
+        self.out_proj = nn.Linear(args.d_inner, args.d_model, bias=args.bias)
+    def forward(self, x):
+        (b, l, d_model) = x.shape
+        x_and_res = self.in_proj(x) # shape (b, l, 2 * d_inner)
+        (x, res) = x_and_res.split(split_size=[self.args.d_inner, self.args.d_inner],
+        dim=-1)
+        x = rearrange(x, 'b l d_inner -> b d_inner l')
+        x = self.conv1d(x)[:, :, :l]
+        x = rearrange(x, 'b d_inner l -> b l d_inner')
+        x = F.silu(x)
+        y = self.ssm(x)
+        y = y * F.silu(res)
+        output = self.out_proj(y)
+    return output
+```
+- ### SSM 메서드
+```python
+def ssm(self, x):
+    (d_inner, d_state) = self.A_log.shape
+    A = -torch.exp(self.A_log.float()) # shape (d_inner, d_state)
+    D = self.D.float()
+    x_dbl = self.x_proj(x) # (b, l, dt_rank + 2*d_state)
+    
+    (delta, B, C) = x_dbl.split(split_size=[self.args.dt_rank, d_state, d_state], dim=-1)
+    delta = F.softplus(self.dt_proj(delta)) # (b, l, d_inner)
+    
+    y = self.selective_scan(x, delta, A, B, C, D)
+    return y
+```
+- ### selective_scan
+```python
+def selective_scan(self, x, delta, A, B, C, D):
+    (b, l, d_inner) = x.shape
+    d_state = A.shape[1]
+    
+    deltaA = torch.exp(einsum(delta, A, 'b l d_inner, d_inner d_state -> b l d_inner
+    d_state'))
+    deltaB_x = einsum(delta, B, x, 'b l d_inner, b l d_state, b l d_inner -> b l d_inner d_state')
+    
+    h = torch.zeros((b, d_in, d_state), device=deltaA.device)
+    ys = []
+    for i in range(l):
+        h = deltaA[:, i] * h + deltaB_x[:, i]
+        y = einsum(h, C[:, i, :], 'b d_inner d_state, b d_state -> b d_inner')
+        ys.append(y)
+    y = torch.stack(ys, dim=1) # shape (b, l, d_in)
+    y = y + x * D
+    return y
+```
